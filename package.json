@@ -1,14 +1,16 @@
 {
-  "name": "debriefbot",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "author": "",
-  "license": "ISC",
-  "dependencies": {
-    "@slack/bolt": "^2.3.0"
-  }
+	"name": "debriefbot",
+	"version": "1.0.0",
+	"description": "",
+	"main": "app.js",
+	"scripts": {
+		"start": "node app.js",
+		"test": "echo \"Error: no test specified\" && exit 1"
+	},
+	"author": "",
+	"license": "ISC",
+	"dependencies": {
+		"@slack/bolt": "^2.3.0",
+		"dotenv": "^8.2.0"
+	}
 }
