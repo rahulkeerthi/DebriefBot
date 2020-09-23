@@ -73,6 +73,7 @@ app.command("/debrief", async ({ ack, body, client }) => {
 					},
 					{
 						type: "input",
+						optional: true,
 						block_id: "generalFeeling",
 						element: {
 							type: "plain_text_input",
@@ -91,6 +92,7 @@ app.command("/debrief", async ({ ack, body, client }) => {
 					},
 					{
 						type: "input",
+						optional: true,
 						block_id: "lecture",
 						element: {
 							type: "plain_text_input",
@@ -109,6 +111,7 @@ app.command("/debrief", async ({ ack, body, client }) => {
 					},
 					{
 						type: "input",
+						optional: true,
 						block_id: "challenges",
 						element: {
 							type: "plain_text_input",
@@ -127,6 +130,7 @@ app.command("/debrief", async ({ ack, body, client }) => {
 					},
 					{
 						type: "input",
+						optional: true,
 						block_id: "students",
 						element: {
 							type: "plain_text_input",
@@ -145,6 +149,7 @@ app.command("/debrief", async ({ ack, body, client }) => {
 					},
 					{
 						type: "input",
+						optional: true,
 						block_id: "studentsById",
 						element: {
 							type: "multi_users_select",
@@ -163,6 +168,7 @@ app.command("/debrief", async ({ ack, body, client }) => {
 					},
 					{
 						type: "input",
+						optional: true,
 						block_id: "takeaways",
 						element: {
 							type: "plain_text_input",
@@ -207,11 +213,11 @@ app.view("debriefModal", async ({ ack, view, context }) => {
 	await ack()
 	const values = view.state.values
 	let targetConversation = view.private_metadata
-	let generalFeeling = values.generalFeeling.generalFeelingInput.value
-	let lecture = values.lecture.lectureInput.value
-	let challenges = values.challenges.challengesInput.value
-	let students = values.students.studentsInput.value
-	let takeaways = values.takeaways.takeawaysInput.value
+	let generalFeeling = values.generalFeeling.generalFeelingInput.value || "No input provided"
+	let lecture = values.lecture.lectureInput.value || "No input provided"
+	let challenges = values.challenges.challengesInput.value || "No input provided"
+	let students = values.students.studentsInput.value || "No input provided"
+	let takeaways = values.takeaways.takeawaysInput.value || "No input provided"
 	// nextTeacher = values.["nextTeacher"]["value"]
 	let studentsById = values.studentsById.studentsByIdInput.selected_users
 	studentsList = studentsById.map(studentId => `• <@${studentId}>\n`).join("")
