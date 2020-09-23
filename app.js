@@ -1,4 +1,4 @@
-const { App } = require("@slack/bolt")
+import { App } from "@slack/bolt"
 
 // Initializes your app with your bot token and signing secret
 const app = new App({
