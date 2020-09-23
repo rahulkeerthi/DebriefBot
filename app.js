@@ -7,16 +7,14 @@ const app = new App({
 })
 
 app.command("/debrief", async ({ ack, body, client }) => {
-	await ack(`Rahul started a debrief`)
-	// console.log(body.user_id, body.team_id)
-
+	await ack(`<@${body.user_id}> started a debrief`)
 	try {
 		let targetChannel = ""
 		if (body.text) {
 			targetChannel = body.text.trim()
 		}
 		if (targetChannel[0] == "#") {
-			targetChannel = targetChannel.substring(1)
+			targetChannel = targetChannel.trim().substring(1)
 		}
 
 		// Call chat.scheduleMessage with the built-in client
@@ -38,6 +36,7 @@ app.command("/debrief", async ({ ack, body, client }) => {
 
 			view: {
 				type: "modal",
+				private_metadata: body.channel_id,
 				callback_id: "debriefModal",
 				title: {
 					type: "plain_text",
@@ -60,7 +59,7 @@ app.command("/debrief", async ({ ack, body, client }) => {
 						elements: [
 							{
 								type: "plain_text",
-								text: "Fill in and submit the form during end-of-day debrief, leave fields blank as needed. Teachers can update responses later by using /debrief",
+								text: `Fill in and submit the form during end-of-day debrief, leave fields blank as needed. Teachers can update responses later by using /debrief #${targetChannelId}`,
 								emoji: true,
 							},
 						],
@@ -77,6 +76,11 @@ app.command("/debrief", async ({ ack, body, client }) => {
 						block_id: "generalFeeling",
 						element: {
 							type: "plain_text_input",
+							action_id: "generalFeelingInput",
+							placeholder: {
+								type: "plain_text",
+								text: "How are the students doing in terms of general engagement, productivity, and enthusiasm? Any specifics to celebrate or mark as a concern?",
+							},
 							multiline: true,
 						},
 						label: {
@@ -90,6 +94,11 @@ app.command("/debrief", async ({ ack, body, client }) => {
 						block_id: "lecture",
 						element: {
 							type: "plain_text_input",
+							action_id: "lectureInput",
+							placeholder: {
+								type: "plain_text",
+								text: "How did the lecture and livecode go in terms of conduct, engagement and understanding? Any areas for reinforcement or attention in the future?",
+							},
 							multiline: true,
 						},
 						label: {
@@ -103,6 +112,11 @@ app.command("/debrief", async ({ ack, body, client }) => {
 						block_id: "challenges",
 						element: {
 							type: "plain_text_input",
+							action_id: "challengesInput",
+							placeholder: {
+								type: "plain_text",
+								text: "What recurring issues and tickets were students having today? Are there any potential issues or areas of improvement for the challenges of the day?",
+							},
 							multiline: true,
 						},
 						label: {
@@ -116,6 +130,11 @@ app.command("/debrief", async ({ ack, body, client }) => {
 						block_id: "students",
 						element: {
 							type: "plain_text_input",
+							action_id: "studentsInput",
+							placeholder: {
+								type: "plain_text",
+								text: "Which students are struggling and need additional attention? Any unusual absences or behaviour? Any follow-up activity required for the next session?",
+							},
 							multiline: true,
 						},
 						label: {
@@ -129,6 +148,7 @@ app.command("/debrief", async ({ ack, body, client }) => {
 						block_id: "studentsById",
 						element: {
 							type: "multi_users_select",
+							action_id: "studentsByIdInput",
 							placeholder: {
 								type: "plain_text",
 								text: "Select users",
@@ -146,6 +166,11 @@ app.command("/debrief", async ({ ack, body, client }) => {
 						block_id: "takeaways",
 						element: {
 							type: "plain_text_input",
+							action_id: "takeawaysInput",
+							placeholder: {
+								type: "plain_text",
+								text: "What can improve today's lesson for future batches? What lessons learned are there for the team? What suggestions can we make for the next session?",
+							},
 							multiline: true,
 						},
 						label: {
@@ -178,37 +203,128 @@ app.command("/debrief", async ({ ack, body, client }) => {
 	}
 })
 
-app.view("debriefModal", async ({ ack, body, view, context }) => {
-	await ack("Debrief completed!")
-	// console.log(context)
-	let generalFeeling, lecture, challenges, students, studentsById, takeaways, nextTeacher, responseToUser, userId
-	userId = view["user"]["id"]
-	generalFeeling = view["state"]["values"]["generalFeeling"]["value"]
-	lecture = view["state"]["values"]["lecture"]["value"]
-	challenges = view["state"]["values"]["challenges"]["value"]
-	students = view["state"]["values"]["students"]["value"]
-	takeaways = view["state"]["values"]["takeaways"]["value"]
-	nextTeacher = view["state"]["values"]["nextTeacher"]["value"]
-	studentsById = view["state"]["values"]["studentsById"]["selected_users"]
-	console.log(generalFeeling, lecture, challenges, students, studentsById, takeaways, nextTeacher, responseToUser, userId)
-	if (generalFeeling) {
-		responseToUser = "Thanks for debriefing!"
-	} else {
-		responseToUser = "There was an error, please try again!"
-	}
+app.view("debriefModal", async ({ ack, view, context }) => {
+	await ack()
+	const values = view.state.values
+	let targetConversation = view.private_metadata
+	let generalFeeling = values.generalFeeling.generalFeelingInput.value
+	let lecture = values.lecture.lectureInput.value
+	let challenges = values.challenges.challengesInput.value
+	let students = values.students.studentsInput.value
+	let takeaways = values.takeaways.takeawaysInput.value
+	// nextTeacher = values.["nextTeacher"]["value"]
+	let studentsById = values.studentsById.studentsByIdInput.selected_users
+	studentsList = studentsById.map(studentId => `• <@${studentId}>\n`).join("")
 
+	let responseToUser = [
+		{
+			type: "section",
+			text: {
+				type: "mrkdwn",
+				text: "Hi Team :wave:",
+			},
+		},
+		{
+			type: "section",
+			text: {
+				type: "mrkdwn",
+				text: "Here's a summary of today's debrief:",
+			},
+		},
+		{
+			type: "divider",
+		},
+		{
+			type: "section",
+			text: {
+				type: "mrkdwn",
+				text: ":rocket: *General feeling about the batch*",
+			},
+		},
+		{
+			type: "section",
+			text: {
+				type: "mrkdwn",
+				text: generalFeeling,
+			},
+		},
+		{
+			type: "section",
+			text: {
+				type: "mrkdwn",
+				text: ":microphone: :livecode: *Lectures and Livecode*",
+			},
+		},
+		{
+			type: "section",
+			text: {
+				type: "mrkdwn",
+				text: lecture,
+			},
+		},
+		{
+			type: "section",
+			text: {
+				type: "mrkdwn",
+				text: ":thinking: *Challenges and Tickets*",
+			},
+		},
+		{
+			type: "section",
+			text: {
+				type: "mrkdwn",
+				text: challenges,
+			},
+		},
+		{
+			type: "section",
+			text: {
+				type: "mrkdwn",
+				text: ":male-student: :female-student: *Students*",
+			},
+		},
+		{
+			type: "section",
+			text: {
+				type: "mrkdwn",
+				text: students,
+			},
+		},
+		{
+			type: "section",
+			text: {
+				type: "mrkdwn",
+				text: studentsList,
+			},
+		},
+		{
+			type: "section",
+			text: {
+				type: "mrkdwn",
+				text: ":takeout_box: *General takeaways*",
+			},
+		},
+		{
+			type: "section",
+			text: {
+				type: "mrkdwn",
+				text: takeaways,
+			},
+		},
+	]
+	responseToUser = JSON.stringify(responseToUser)
 	try {
 		await app.client.chat.postMessage({
-			token: process.env.SLACK_BOT_TOKEN,
-			channel: view["team"]["id"],
-			text: responseToUser,
+			token: context.botToken,
+			channel: targetConversation,
+			text: "",
+			blocks: responseToUser,
 		})
 	} catch (error) {
 		console.error(error)
 	}
 })
 ;(async () => {
-	// Start your app
 	await app.start(process.env.PORT || 4390)
 	console.log("⚡️ Bolt app is running!")
 })()
