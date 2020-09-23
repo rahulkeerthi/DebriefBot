@@ -219,9 +219,12 @@ app.view("debriefModal", async ({ ack, view, context }) => {
 	let students = values.students.studentsInput.value || "No input provided"
 	let takeaways = values.takeaways.takeawaysInput.value || "No input provided"
 	// nextTeacher = values.["nextTeacher"]["value"]
-	let studentsById = values.studentsById.studentsByIdInput.selected_users
-	studentsList = studentsById.map(studentId => `• <@${studentId}>\n`).join("")
-
+	let studentsById = values.studentsById.studentsByIdInput.selected_users || []
+	if (studentsById != []) {
+		studentsList = studentsById.map(studentId => `• <@${studentId}>\n`).join("")
+	} else {
+		studentsList = ""
+	}
 	let responseToUser = [
 		{
 			type: "section",
