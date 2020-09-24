@@ -213,18 +213,18 @@ app.view("debriefModal", async ({ ack, view, context }) => {
 	await ack()
 	const values = view.state.values
 	let targetConversation = view.private_metadata
+	// nextTeacher = values.["nextTeacher"]["value"]
 	let generalFeeling = values.generalFeeling.generalFeelingInput.value || "No input provided"
 	let lecture = values.lecture.lectureInput.value || "No input provided"
 	let challenges = values.challenges.challengesInput.value || "No input provided"
 	let students = values.students.studentsInput.value || "No input provided"
 	let takeaways = values.takeaways.takeawaysInput.value || "No input provided"
-	// nextTeacher = values.["nextTeacher"]["value"]
 	let studentsById = values.studentsById.studentsByIdInput.selected_users || []
-	let studentsList
+	let studentsList = ""
 	if (studentsById.length > 0) {
 		studentsList = studentsById.map(studentId => `• <@${studentId}>\n`).join("")
 	} else {
-		studentsList = ""
+		studentsList = "No students tagged"
 	}
 	let responseToUser = [
 		{
@@ -327,8 +327,8 @@ app.view("debriefModal", async ({ ack, view, context }) => {
 		await app.client.chat.postMessage({
 			token: context.botToken,
 			channel: targetConversation,
-			text: "",
 			blocks: responseToUser,
+			text: "",
 		})
 	} catch (error) {
 		console.error(error)
