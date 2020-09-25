@@ -1,13 +1,110 @@
 const { App } = require("@slack/bolt")
+require("dotenv").config()
+
+class debriefStore {
+	set(debriefId, value, expiresAt) {
+		return db()
+			.ref("debriefs/" + debriefId)
+			.set({ value, expiresAt })
+	}
+	get(debriefId) {
+		return new Promise((resolve, reject) => {
+			db()
+				.ref("debriefs/" + debriefId)
+				.once("value")
+				.then(result => {
+					if (result !== undefined) {
+						if (result.expiresAt !== undefined && Date.now() > result.expiresAt) {
+							db()
+								.ref("debriefs/" + debriefId)
+								.delete()
+							reject(new Error("Debrief expired"))
+						}
+						resolve(result.value)
+					} else {
+						reject(new Error("Debrief not found"))
+					}
+				})
+		})
+	}
+}
 
 // Initializes your app with your bot token and signing secret
 const app = new App({
 	token: process.env.SLACK_BOT_TOKEN,
 	signingSecret: process.env.SLACK_SIGNING_SECRET,
+	debriefStore: new debriefStore(),
 })
 
-app.command("/debrief", async ({ ack, body, client }) => {
-	await ack(`<@${body.user_id}> started a debrief`)
+async function fetchMessage(channel, user) {
+	try {
+		const result = await app.client.conversations.history({
+			token: process.env.SLACK_BOT_TOKEN,
+			channel: channel,
+			latest: Date.now() - 24 * 60 * 60 * 1000,
+			inclusive: true,
+			limit: 1,
+		})
+
+		if (result.messages.length == 0) {
+			try {
+				await app.client.chat.postEphemeral({
+					token: process.env.SLACK_BOT_TOKEN,
+					channel: channel,
+					user: user,
+					text: `No recent debrief available. Please start a new one with /debrief`,
+				})
+			} catch (err) {
+				console.error(err)
+			}
+			return false
+		} else {
+			let messages = result.messages.filter(message => {
+				if (message.bot_profile) {
+					return message.bot_profile.name == "DebriefBot"
+				} else {
+					return false
+				}
+			})
+			let message = messages[0].blocks
+			msg = {
+				generalFeelingInitial: message[4].text.text,
+				lectureInitial: message[6].text.text,
+				challengesInitial: message[8].text.text,
+				studentsInitial: message[10].text.text,
+				studentsByIdInitial: message[11].text.text,
+				takeawaysInitial: message[13].text.text,
+			}
+
+			if (msg.studentsByIdInitial != "No students tagged") {
+				msg.studentsByIdInitial = msg.studentsByIdInitial.match(/[0-9A-Z]+/g)
+			}
+			Object.keys(msg).forEach(key => {
+				if (msg[key] == "No students tagged") {
+					msg[key] = ""
+				} else if (msg[key] == "No input provided") {
+					msg[key] = ""
+				} else {
+					return
+				}
+			})
+			return msg
+		}
+	} catch (error) {
+		console.error(error)
+	}
+}
+
+app.command("/db", async ({ ack, body, client }) => {
+	let messageInitial = { generalFeelingInitial: "", lectureInitial: "", challengesInitial: "", studentsInitial: "", studentsByIdInitial: "", takeawaysInitial: "" }
+
+	if (body.text == "update") {
+		await ack(`You're updating the debrief`)
+		messageInitial = await fetchMessage(body.channel_id, body.user_id)
+	} else {
+		await ack(`You're starting today's debrief`)
+	}
+
 	try {
 		let targetChannel = ""
 		if (body.text) {
@@ -17,13 +114,11 @@ app.command("/debrief", async ({ ack, body, client }) => {
 			targetChannel = targetChannel.trim().substring(1)
 		}
 
-		// Call chat.scheduleMessage with the built-in client
 		const userChannels = await client.conversations.list({
 			types: "public_channel",
 			exclude_archived: true,
 			token: process.env.SLACK_BOT_TOKEN,
 		})
-		// console.log(targetChannel)
 		let targetChannelList = userChannels.channels.filter(channel => {
 			return channel.name == targetChannel
 		})
@@ -31,179 +126,189 @@ app.command("/debrief", async ({ ack, body, client }) => {
 		if (targetChannelList.length > 0) {
 			targetChannelId = targetChannelList[0].id
 		}
-		const result = await client.views.open({
-			trigger_id: body.trigger_id,
 
-			view: {
-				type: "modal",
-				private_metadata: body.channel_id,
-				callback_id: "debriefModal",
-				title: {
-					type: "plain_text",
-					text: "Let's Debrief! 🚀",
-					emoji: true,
-				},
-				submit: {
-					type: "plain_text",
-					text: "Submit",
-					emoji: true,
-				},
-				close: {
-					type: "plain_text",
-					text: "Cancel",
-					emoji: true,
-				},
-				blocks: [
+		let blocks = [
+			{
+				type: "context",
+				elements: [
 					{
-						type: "context",
-						elements: [
-							{
-								type: "plain_text",
-								text: `Fill in and submit the form during end-of-day debrief, leave fields blank as needed. Teachers can update responses later by using /debrief #${targetChannelId}`,
-								emoji: true,
-							},
-						],
+						type: "plain_text",
+						text: `Fill in and submit the form during end-of-day debrief, leave fields blank as needed. Teachers can update responses later by using /debrief #${targetChannelId}`,
+						emoji: true,
 					},
-					{
-						type: "section",
-						text: {
-							type: "mrkdwn",
-							text: `Hello, <@${body.user_id}>! Let's get started with today's debrief${targetChannel == "" ? "!" : ` for <#${targetChannelId}>`}`,
-						},
-					},
-					{
-						type: "input",
-						optional: true,
-						block_id: "generalFeeling",
-						element: {
-							type: "plain_text_input",
-							action_id: "generalFeelingInput",
-							placeholder: {
-								type: "plain_text",
-								text: "How are the students doing in terms of general engagement, productivity, and enthusiasm? Any specifics to celebrate or mark as a concern?",
-							},
-							multiline: true,
-						},
-						label: {
-							type: "plain_text",
-							text: "General feeling about the batch:",
-							emoji: true,
-						},
-					},
-					{
-						type: "input",
-						optional: true,
-						block_id: "lecture",
-						element: {
-							type: "plain_text_input",
-							action_id: "lectureInput",
-							placeholder: {
-								type: "plain_text",
-								text: "How did the lecture and livecode go in terms of conduct, engagement and understanding? Any areas for reinforcement or attention in the future?",
-							},
-							multiline: true,
-						},
-						label: {
-							type: "plain_text",
-							text: "Lectures:",
-							emoji: true,
-						},
-					},
-					{
-						type: "input",
-						optional: true,
-						block_id: "challenges",
-						element: {
-							type: "plain_text_input",
-							action_id: "challengesInput",
-							placeholder: {
-								type: "plain_text",
-								text: "What recurring issues and tickets were students having today? Are there any potential issues or areas of improvement for the challenges of the day?",
-							},
-							multiline: true,
-						},
-						label: {
-							type: "plain_text",
-							text: "Challenges and Tickets:",
-							emoji: true,
-						},
-					},
-					{
-						type: "input",
-						optional: true,
-						block_id: "students",
-						element: {
-							type: "plain_text_input",
-							action_id: "studentsInput",
-							placeholder: {
-								type: "plain_text",
-								text: "Which students are struggling and need additional attention? Any unusual absences or behaviour? Any follow-up activity required for the next session?",
-							},
-							multiline: true,
-						},
-						label: {
-							type: "plain_text",
-							text: "Students:",
-							emoji: true,
-						},
-					},
-					{
-						type: "input",
-						optional: true,
-						block_id: "studentsById",
-						element: {
-							type: "multi_users_select",
-							action_id: "studentsByIdInput",
-							placeholder: {
-								type: "plain_text",
-								text: "Select users",
-								emoji: true,
-							},
-						},
-						label: {
-							type: "plain_text",
-							text: "Students to Monitor:",
-							emoji: true,
-						},
-					},
-					{
-						type: "input",
-						optional: true,
-						block_id: "takeaways",
-						element: {
-							type: "plain_text_input",
-							action_id: "takeawaysInput",
-							placeholder: {
-								type: "plain_text",
-								text: "What can improve today's lesson for future batches? What lessons learned are there for the team? What suggestions can we make for the next session?",
-							},
-							multiline: true,
-						},
-						label: {
-							type: "plain_text",
-							text: "General takeaways:",
-							emoji: true,
-						},
-					},
-					// {
-					// 	type: "section",
-					// 	block_id: "nextTeacher",
-					// 	text: {
-					// 		type: "mrkdwn",
-					// 		text: "Next session's teacher",
-					// 	},
-					// 	accessory: {
-					// 		type: "users_select",
-					// 		placeholder: {
-					// 			type: "plain_text",
-					// 			text: "Select a user",
-					// 			emoji: true,
-					// 		},
-					// 	},
-					// },
 				],
 			},
-		})
+			{
+				type: "section",
+				text: {
+					type: "mrkdwn",
+					text: `Hello, <@${body.user_id}>! Let's get started with today's debrief${targetChannel == "" ? "!" : ` for <#${targetChannelId}>`}`,
+				},
+			},
+			{
+				type: "input",
+				optional: true,
+				block_id: "generalFeeling",
+				element: {
+					type: "plain_text_input",
+					action_id: "generalFeelingInput",
+					initial_value: messageInitial.generalFeelingInitial,
+					placeholder: {
+						type: "plain_text",
+						text: "How are the students doing in terms of general engagement, productivity, and enthusiasm? Any specifics to celebrate or mark as a concern?",
+					},
+					multiline: true,
+				},
+				label: {
+					type: "plain_text",
+					text: "General feeling about the batch:",
+					emoji: true,
+				},
+			},
+			{
+				type: "input",
+				optional: true,
+				block_id: "lecture",
+				element: {
+					type: "plain_text_input",
+					action_id: "lectureInput",
+					initial_value: messageInitial.lectureInitial,
+					placeholder: {
+						type: "plain_text",
+						text: "How did the lecture and livecode go in terms of conduct, engagement and understanding? Any areas for reinforcement or attention in the future?",
+					},
+					multiline: true,
+				},
+				label: {
+					type: "plain_text",
+					text: "Lectures:",
+					emoji: true,
+				},
+			},
+			{
+				type: "input",
+				optional: true,
+				block_id: "challenges",
+				element: {
+					type: "plain_text_input",
+					action_id: "challengesInput",
+					initial_value: messageInitial.challengesInitial,
+					placeholder: {
+						type: "plain_text",
+						text: "What recurring issues and tickets were students having today? Are there any potential issues or areas of improvement for the challenges of the day?",
+					},
+					multiline: true,
+				},
+				label: {
+					type: "plain_text",
+					text: "Challenges and Tickets:",
+					emoji: true,
+				},
+			},
+			{
+				type: "input",
+				optional: true,
+				block_id: "students",
+				element: {
+					type: "plain_text_input",
+					action_id: "studentsInput",
+					initial_value: messageInitial.studentsInitial,
+					placeholder: {
+						type: "plain_text",
+						text: "Which students are struggling and need additional attention? Any unusual absences or behaviour? Any follow-up activity required for the next session?",
+					},
+					multiline: true,
+				},
+				label: {
+					type: "plain_text",
+					text: "Students:",
+					emoji: true,
+				},
+			},
+			{
+				type: "input",
+				optional: true,
+				block_id: "studentsById",
+				element: {
+					type: "multi_users_select",
+					action_id: "studentsByIdInput",
+					initial_users: messageInitial.studentsByIdInitial || [],
+					placeholder: {
+						type: "plain_text",
+						text: "Select users",
+						emoji: true,
+					},
+				},
+				label: {
+					type: "plain_text",
+					text: "Students to Monitor:",
+					emoji: true,
+				},
+			},
+			{
+				type: "input",
+				optional: true,
+				block_id: "takeaways",
+				element: {
+					type: "plain_text_input",
+					action_id: "takeawaysInput",
+					initial_value: messageInitial.takeawaysInitial,
+					placeholder: {
+						type: "plain_text",
+						text: "What can improve today's lesson for future batches? What lessons learned are there for the team? What suggestions can we make for the next session?",
+					},
+					multiline: true,
+				},
+				label: {
+					type: "plain_text",
+					text: "General takeaways:",
+					emoji: true,
+				},
+			},
+			// {
+			// 	type: "section",
+			// 	block_id: "nextTeacher",
+			// 	text: {
+			// 		type: "mrkdwn",
+			// 		text: "Next session's teacher",
+			// 	},
+			// 	accessory: {
+			// 		type: "users_select",
+			// 		placeholder: {
+			// 			type: "plain_text",
+			// 			text: "Select a user",
+			// 			emoji: true,
+			// 		},
+			// 	},
+			// },
+		]
+		if (messageInitial) {
+			const result = await client.views.open({
+				trigger_id: body.trigger_id,
+
+				view: {
+					type: "modal",
+					private_metadata: body.channel_id,
+					callback_id: "debriefModal",
+					title: {
+						type: "plain_text",
+						text: "Let's Debrief! 🚀",
+						emoji: true,
+					},
+					submit: {
+						type: "plain_text",
+						text: "Submit",
+						emoji: true,
+					},
+					close: {
+						type: "plain_text",
+						text: "Cancel",
+						emoji: true,
+					},
+					blocks: blocks,
+				},
+			})
+		}
 	} catch (error) {
 		console.error(error)
 	}
@@ -211,6 +316,7 @@ app.command("/debrief", async ({ ack, body, client }) => {
 
 app.view("debriefModal", async ({ ack, view, context }) => {
 	await ack()
+	console.log(view)
 	const values = view.state.values
 	let targetConversation = view.private_metadata
 	// nextTeacher = values.["nextTeacher"]["value"]
@@ -324,7 +430,7 @@ app.view("debriefModal", async ({ ack, view, context }) => {
 	]
 	responseToUser = JSON.stringify(responseToUser)
 	try {
-		await app.client.chat.postMessage({
+		const response = await app.client.chat.postMessage({
 			token: context.botToken,
 			channel: targetConversation,
 			blocks: responseToUser,

@@ -1,16 +1,18 @@
 {
 	"name": "debriefbot",
 	"version": "1.0.0",
-	"description": "",
+	"description": "DebriefBot is a Slack bot to simplify teaching staff debriefs",
 	"main": "app.js",
 	"scripts": {
-		"start": "node app.js",
+		"start": "nodemon app.js",
 		"test": "echo \"Error: no test specified\" && exit 1"
 	},
-	"author": "",
+	"author": "Rahul Keerthi",
 	"license": "ISC",
 	"dependencies": {
 		"@slack/bolt": "^2.3.0",
-		"dotenv": "^8.2.0"
+		"dotenv": "^8.2.0",
+		"mongodb": "^3.6.2",
+		"nodemon": "^2.0.4"
 	}
 }
