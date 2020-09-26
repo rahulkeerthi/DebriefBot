@@ -66,6 +66,22 @@ async function fetchMessage(channel, user) {
 					return false
 				}
 			})
+
+			async function replaceUserMentions(string) {
+				const usersArray = string.match(/[0-9A-Z]+/g)
+				if (usersArray.length > 0) {
+					await usersArray.forEach(user => {
+						const response = app.client.users.profile.get({
+							token: process.env.SLACK_BOT_TOKEN,
+							user: user,
+						})
+						return string.replace(/[0-9A-Z]+/g, `<${response.profile.display_name}`)
+					})
+				}
+				console.log(string)
+				return string
+			}
+
 			let message = messages[0].blocks
 			msg = {
 				generalFeelingInitial: message[4].text.text,
@@ -94,6 +110,8 @@ async function fetchMessage(channel, user) {
 		console.error(error)
 	}
 }
+
+let debriefTs
 
 app.command("/db", async ({ ack, body, client }) => {
 	let messageInitial = { generalFeelingInitial: "", lectureInitial: "", challengesInitial: "", studentsInitial: "", studentsByIdInitial: "", takeawaysInitial: "" }
@@ -316,7 +334,6 @@ app.command("/db", async ({ ack, body, client }) => {
 
 app.view("debriefModal", async ({ ack, view, context }) => {
 	await ack()
-	console.log(view)
 	const values = view.state.values
 	let targetConversation = view.private_metadata
 	// nextTeacher = values.["nextTeacher"]["value"]
@@ -429,15 +446,29 @@ app.view("debriefModal", async ({ ack, view, context }) => {
 		},
 	]
 	responseToUser = JSON.stringify(responseToUser)
-	try {
-		const response = await app.client.chat.postMessage({
-			token: context.botToken,
-			channel: targetConversation,
-			blocks: responseToUser,
-			text: "",
-		})
-	} catch (error) {
-		console.error(error)
+	if (!debriefTs || debriefTs < (Date.now() - 12 * 60 * 60 * 1000) / 1000) {
+		try {
+			const response = await app.client.chat.postMessage({
+				token: context.botToken,
+				channel: targetConversation,
+				blocks: responseToUser,
+				text: "",
+			})
+			debriefTs = response.ts
+		} catch (error) {
+			console.error(error)
+		}
+	} else {
+		try {
+			const response = await app.client.chat.update({
+				token: context.botToken,
+				channel: targetConversation,
+				blocks: responseToUser,
+				ts: debriefTs,
+			})
+		} catch (error) {
+			console.error(error)
+		}
 	}
 })
 ;(async () => {
