@@ -337,18 +337,19 @@ app.view("debriefModal", async ({ ack, view, context }) => {
 	const values = view.state.values
 	let targetConversation = view.private_metadata
 	// nextTeacher = values.["nextTeacher"]["value"]
-	let generalFeeling = values.generalFeeling.generalFeelingInput.value || "No input provided"
-	let lecture = values.lecture.lectureInput.value || "No input provided"
-	let challenges = values.challenges.challengesInput.value || "No input provided"
-	let students = values.students.studentsInput.value || "No input provided"
-	let takeaways = values.takeaways.takeawaysInput.value || "No input provided"
+	let generalFeeling = values.generalFeeling.generalFeelingInput.value || "No input provided yet"
+	let lecture = values.lecture.lectureInput.value || "No input provided yet"
+	let challenges = values.challenges.challengesInput.value || "No input provided yet"
+	let students = values.students.studentsInput.value || "No input provided yet"
+	let takeaways = values.takeaways.takeawaysInput.value || "No input provided yet"
 	let studentsById = values.studentsById.studentsByIdInput.selected_users || []
 	let studentsList = ""
 	if (studentsById.length > 0) {
 		studentsList = studentsById.map(studentId => `• <@${studentId}>\n`).join("")
 	} else {
-		studentsList = "No students tagged"
+		studentsList = "No students tagged yet"
 	}
+	let options = { hour12: true }
 	let responseToUser = [
 		{
 			type: "section",
@@ -361,7 +362,7 @@ app.view("debriefModal", async ({ ack, view, context }) => {
 			type: "section",
 			text: {
 				type: "mrkdwn",
-				text: "Here's a summary of today's debrief:",
+				text: `Here's a summary of today's debrief (last updated: ${new Date().toLocaleString("en-GB", options)}):`,
 			},
 		},
 		{
@@ -446,6 +447,7 @@ app.view("debriefModal", async ({ ack, view, context }) => {
 		},
 	]
 	responseToUser = JSON.stringify(responseToUser)
+	console.log(new Date(debriefTs * 1000).toLocaleString(), new Date(Date.now() - 12 * 60 * 60 * 1000).toLocaleString())
 	if (!debriefTs || debriefTs < (Date.now() - 12 * 60 * 60 * 1000) / 1000) {
 		try {
 			const response = await app.client.chat.postMessage({
