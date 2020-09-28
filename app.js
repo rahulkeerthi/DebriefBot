@@ -41,10 +41,12 @@ async function fetchMessage(channel, user) {
 		const result = await app.client.conversations.history({
 			token: process.env.SLACK_BOT_TOKEN,
 			channel: channel,
-			latest: Date.now() - 72 * 60 * 60 * 1000,
+			oldest: Date.now() - 24 * 60 * 60 * 1000,
 			inclusive: true,
 			limit: 1,
 		})
+
+		console.log(result.messages)
 
 		if (result.messages.length == 0) {
 			try {
@@ -52,7 +54,7 @@ async function fetchMessage(channel, user) {
 					token: process.env.SLACK_BOT_TOKEN,
 					channel: channel,
 					user: user,
-					text: `No recent debrief available. Please start a new one with /debrief`,
+					text: `No recent (last 24h) debrief available. Please start a new one with /debrief`,
 				})
 			} catch (err) {
 				console.error(err)
