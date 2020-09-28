@@ -41,7 +41,7 @@ async function fetchMessage(channel, user) {
 		const result = await app.client.conversations.history({
 			token: process.env.SLACK_BOT_TOKEN,
 			channel: channel,
-			latest: Date.now() - 24 * 60 * 60 * 1000,
+			latest: Date.now() - 72 * 60 * 60 * 1000,
 			inclusive: true,
 			limit: 1,
 		})
@@ -93,13 +93,13 @@ async function fetchMessage(channel, user) {
 				ts: messages[0].ts,
 			}
 
-			if (msg.studentsByIdInitial != "No students tagged") {
+			if (msg.studentsByIdInitial != "No students tagged yet") {
 				msg.studentsByIdInitial = msg.studentsByIdInitial.match(/[0-9A-Z]+/g)
 			}
 			Object.keys(msg).forEach(key => {
-				if (msg[key] == "No students tagged") {
+				if (msg[key] == "No students tagged yet") {
 					msg[key] = ""
-				} else if (msg[key] == "No input provided") {
+				} else if (msg[key] == "No input provided yet") {
 					msg[key] = ""
 				} else {
 					return
@@ -116,7 +116,7 @@ app.command("/debrief", async ({ ack, body, client }) => {
 	let messageInitial = { generalFeelingInitial: "", lectureInitial: "", challengesInitial: "", studentsInitial: "", studentsByIdInitial: "", takeawaysInitial: "" }
 	let debriefTs
 	let isUpdate
-	if (body.text == "update") {
+	if (body.text.trim() == "update") {
 		await ack(`You're updating the debrief`)
 		messageInitial = await fetchMessage(body.channel_id, body.user_id)
 		debriefTs = messageInitial.ts
