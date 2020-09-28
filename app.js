@@ -113,7 +113,7 @@ async function fetchMessage(channel, user) {
 
 let debriefTs
 
-app.command("/db", async ({ ack, body, client }) => {
+app.command("/debrief", async ({ ack, body, client }) => {
 	let messageInitial = { generalFeelingInitial: "", lectureInitial: "", challengesInitial: "", studentsInitial: "", studentsByIdInitial: "", takeawaysInitial: "" }
 
 	if (body.text == "update") {
