@@ -485,7 +485,6 @@ app.view("debriefModal", async ({ ack, view, context }) => {
 				blocks: responseToUser,
 				text: "",
 			})
-			debriefTs = response.ts
 		} catch (error) {
 			console.error(error)
 		}
