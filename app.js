@@ -1,39 +1,39 @@
 const { App } = require("@slack/bolt")
 require("dotenv").config()
 
-class debriefStore {
-	set(debriefId, value, expiresAt) {
-		return db()
-			.ref("debriefs/" + debriefId)
-			.set({ value, expiresAt })
-	}
-	get(debriefId) {
-		return new Promise((resolve, reject) => {
-			db()
-				.ref("debriefs/" + debriefId)
-				.once("value")
-				.then(result => {
-					if (result !== undefined) {
-						if (result.expiresAt !== undefined && Date.now() > result.expiresAt) {
-							db()
-								.ref("debriefs/" + debriefId)
-								.delete()
-							reject(new Error("Debrief expired"))
-						}
-						resolve(result.value)
-					} else {
-						reject(new Error("Debrief not found"))
-					}
-				})
-		})
-	}
-}
+// class debriefStore {
+// 	set(debriefId, value, expiresAt) {
+// 		return db()
+// 			.ref("debriefs/" + debriefId)
+// 			.set({ value, expiresAt })
+// 	}
+// 	get(debriefId) {
+// 		return new Promise((resolve, reject) => {
+// 			db()
+// 				.ref("debriefs/" + debriefId)
+// 				.once("value")
+// 				.then(result => {
+// 					if (result !== undefined) {
+// 						if (result.expiresAt !== undefined && Date.now() > result.expiresAt) {
+// 							db()
+// 								.ref("debriefs/" + debriefId)
+// 								.delete()
+// 							reject(new Error("Debrief expired"))
+// 						}
+// 						resolve(result.value)
+// 					} else {
+// 						reject(new Error("Debrief not found"))
+// 					}
+// 				})
+// 		})
+// 	}
+// }
 
 // Initializes your app with your bot token and signing secret
 const app = new App({
 	token: process.env.SLACK_BOT_TOKEN,
 	signingSecret: process.env.SLACK_SIGNING_SECRET,
-	debriefStore: new debriefStore(),
+	// debriefStore: new debriefStore(),
 })
 
 async function fetchMessage(channel, user) {
@@ -67,20 +67,20 @@ async function fetchMessage(channel, user) {
 				}
 			})
 
-			async function replaceUserMentions(string) {
-				const usersArray = string.match(/[0-9A-Z]+/g)
-				if (usersArray.length > 0) {
-					await usersArray.forEach(user => {
-						const response = app.client.users.profile.get({
-							token: process.env.SLACK_BOT_TOKEN,
-							user: user,
-						})
-						return string.replace(/[0-9A-Z]+/g, `<${response.profile.display_name}`)
-					})
-				}
-				console.log(string)
-				return string
-			}
+			// async function replaceUserMentions(string) {
+			// 	const usersArray = string.match(/[0-9A-Z]+/g)
+			// 	if (usersArray.length > 0) {
+			// 		await usersArray.forEach(user => {
+			// 			const response = app.client.users.profile.get({
+			// 				token: process.env.SLACK_BOT_TOKEN,
+			// 				user: user,
+			// 			})
+			// 			return string.replace(/[0-9A-Z]+/g, `<${response.profile.display_name}`)
+			// 		})
+			// 	}
+			// 	console.log(string)
+			// 	return string
+			// }
 
 			let message = messages[0].blocks
 			msg = {
@@ -90,6 +90,7 @@ async function fetchMessage(channel, user) {
 				studentsInitial: message[10].text.text,
 				studentsByIdInitial: message[11].text.text,
 				takeawaysInitial: message[13].text.text,
+				ts: messages[0].ts,
 			}
 
 			if (msg.studentsByIdInitial != "No students tagged") {
@@ -111,14 +112,15 @@ async function fetchMessage(channel, user) {
 	}
 }
 
-let debriefTs
-
 app.command("/debrief", async ({ ack, body, client }) => {
 	let messageInitial = { generalFeelingInitial: "", lectureInitial: "", challengesInitial: "", studentsInitial: "", studentsByIdInitial: "", takeawaysInitial: "" }
-
+	let debriefTs
+	let isUpdate
 	if (body.text == "update") {
 		await ack(`You're updating the debrief`)
 		messageInitial = await fetchMessage(body.channel_id, body.user_id)
+		debriefTs = messageInitial.ts
+		isUpdate = true
 	} else {
 		await ack(`You're starting today's debrief`)
 	}
@@ -144,7 +146,12 @@ app.command("/debrief", async ({ ack, body, client }) => {
 		if (targetChannelList.length > 0) {
 			targetChannelId = targetChannelList[0].id
 		}
-
+		metadata = JSON.stringify({
+			channel: body.channel_id,
+			debriefTs: debriefTs,
+			isUpdate: isUpdate,
+			user: body.user_id,
+		})
 		let blocks = [
 			{
 				type: "context",
@@ -306,7 +313,7 @@ app.command("/debrief", async ({ ack, body, client }) => {
 
 				view: {
 					type: "modal",
-					private_metadata: body.channel_id,
+					private_metadata: metadata,
 					callback_id: "debriefModal",
 					title: {
 						type: "plain_text",
@@ -335,7 +342,7 @@ app.command("/debrief", async ({ ack, body, client }) => {
 app.view("debriefModal", async ({ ack, view, context }) => {
 	await ack()
 	const values = view.state.values
-	let targetConversation = view.private_metadata
+	const { channel, debriefTs, isUpdate, user } = JSON.parse(view.private_metadata)
 	// nextTeacher = values.["nextTeacher"]["value"]
 	let generalFeeling = values.generalFeeling.generalFeelingInput.value || "No input provided yet"
 	let lecture = values.lecture.lectureInput.value || "No input provided yet"
@@ -447,27 +454,38 @@ app.view("debriefModal", async ({ ack, view, context }) => {
 		},
 	]
 	responseToUser = JSON.stringify(responseToUser)
-	console.log(new Date(debriefTs * 1000).toLocaleString(), new Date(Date.now() - 12 * 60 * 60 * 1000).toLocaleString())
-	if (!debriefTs || debriefTs < (Date.now() - 12 * 60 * 60 * 1000) / 1000) {
+
+	if (isUpdate && debriefTs < (Date.now() - 18 * 60 * 60 * 1000) / 1000) {
 		try {
-			const response = await app.client.chat.postMessage({
-				token: context.botToken,
-				channel: targetConversation,
-				blocks: responseToUser,
-				text: "",
+			await app.client.chat.postEphemeral({
+				token: process.env.SLACK_BOT_TOKEN,
+				channel: channel,
+				user: user,
+				text: `Last Debrief is older than 18 hours. Please start a new one with /debrief`,
 			})
-			debriefTs = response.ts
+		} catch (err) {
+			console.error(err)
+		}
+	} else if (isUpdate) {
+		try {
+			await app.client.chat.update({
+				token: context.botToken,
+				channel: channel,
+				blocks: responseToUser,
+				ts: debriefTs,
+			})
 		} catch (error) {
 			console.error(error)
 		}
 	} else {
 		try {
-			const response = await app.client.chat.update({
+			const response = await app.client.chat.postMessage({
 				token: context.botToken,
-				channel: targetConversation,
+				channel: channel,
 				blocks: responseToUser,
-				ts: debriefTs,
+				text: "",
 			})
+			debriefTs = response.ts
 		} catch (error) {
 			console.error(error)
 		}
