@@ -41,7 +41,7 @@ async function fetchMessage(channel, user) {
 		const result = await app.client.conversations.history({
 			token: process.env.SLACK_BOT_TOKEN,
 			channel: channel,
-			oldest: Date.now() - 24 * 60 * 60 * 1000,
+			oldest: (Date.now() - 24 * 60 * 60 * 1000) / 1000,
 			inclusive: true,
 			limit: 1,
 		})
