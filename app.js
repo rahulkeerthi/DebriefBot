@@ -129,7 +129,7 @@ app.command("/debrief", async ({ ack, body, client }) => {
 
 	try {
 		let targetChannel = ""
-		if (body.text) {
+		if (body.text && body.text != "update") {
 			targetChannel = body.text.trim()
 		}
 		if (targetChannel[0] == "#") {
