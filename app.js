@@ -23,7 +23,7 @@ async function fetchMessage(channel, user) {
 					token: process.env.SLACK_BOT_TOKEN,
 					channel: channel,
 					user: user,
-					text: `No recent (last 24h) debrief available. Please start a new one with /debrief`,
+					text: `No recent (last 24h) debrief available. Please start a new one with "/debrief #batch-123-city"`,
 				})
 			} catch (err) {
 				console.error(err)
@@ -66,8 +66,7 @@ async function fetchMessage(channel, user) {
 }
 
 app.command("/debrief", async ({ ack, body, client }) => {
-	let messageInitial = { generalFeelingInitial: "", lectureInitial: "", challengesInitial: "", studentsInitial: "", studentsByIdInitial: "", takeawaysInitial: "" }
-	let debriefTs, isUpdate, targetChannel, targetChannelId
+	let messageInitial, debriefTs, isUpdate, targetChannel, targetChannelId
 
 	if (body.text.trim() == "update") {
 		await ack(`You're updating the debrief`)
@@ -77,24 +76,30 @@ app.command("/debrief", async ({ ack, body, client }) => {
 
 		isUpdate = true
 	} else if (body.text.trim()[0] == "#") {
-		await ack(`You're starting today's debrief`)
-		isUpdate = false
-		targetChannel = body.text.trim().substring(1)
-		try {
-			const userChannels = await client.conversations.list({
-				types: "public_channel",
-				exclude_archived: true,
-				token: process.env.SLACK_BOT_TOKEN,
-			})
-			console.log(`userChannels: ${userChannels}`)
-			let targetChannelList = userChannels.channels.filter(channel => {
-				return channel.name == targetChannel
-			})
-			if (targetChannelList.length > 0) {
-				targetChannelId = targetChannelList[0].id
+		messageInitial = await fetchMessage(body.channel_id, body.user_id)
+		if (messageInitial.ts > (Date.now() - 12 * 60 * 60 * 1000) / 1000) {
+			await ack(`There's already a debrief for today, use "/debrief update" instead`)
+		} else {
+			await ack(`You're starting today's debrief`)
+			messageInitial = { generalFeelingInitial: "", lectureInitial: "", challengesInitial: "", studentsInitial: "", studentsByIdInitial: "", takeawaysInitial: "" }
+			isUpdate = false
+			targetChannel = body.text.trim().substring(1)
+			try {
+				const userChannels = await client.conversations.list({
+					types: "public_channel",
+					exclude_archived: true,
+					token: process.env.SLACK_BOT_TOKEN,
+				})
+				console.log(`userChannels: ${userChannels}`)
+				let targetChannelList = userChannels.channels.filter(channel => {
+					return channel.name == targetChannel
+				})
+				if (targetChannelList.length > 0) {
+					targetChannelId = targetChannelList[0].id
+				}
+			} catch (err) {
+				console.error(err)
 			}
-		} catch (err) {
-			console.error(err)
 		}
 	} else {
 		await ack(`To start a new debrief, use "/debrief #batch-123-xyz" or to update today's debrief use "/debrief update"`)
