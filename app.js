@@ -17,6 +17,8 @@ async function fetchMessage(channel, user) {
 			limit: 1,
 		})
 
+		console.log(result)
+
 		if (result.messages.length == 0) {
 			try {
 				await app.client.chat.postEphemeral({
@@ -68,7 +70,7 @@ async function fetchMessage(channel, user) {
 app.command("/debrief", async ({ ack, body, client }) => {
 	let messageInitial = { generalFeelingInitial: "", lectureInitial: "", challengesInitial: "", studentsInitial: "", studentsByIdInitial: "", takeawaysInitial: "" }
 	let debriefTs, isUpdate, targetChannel, targetChannelId
-
+	console.log(body.channel_id)
 	if (body.text.trim() == "update") {
 		await ack(`You're updating the debrief`)
 		messageInitial = await fetchMessage(body.channel_id, body.user_id)
