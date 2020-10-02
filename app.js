@@ -12,12 +12,10 @@ async function fetchMessage(channel, user) {
 		const result = await app.client.conversations.history({
 			token: process.env.SLACK_BOT_TOKEN,
 			channel: channel,
-			// oldest: (Date.now() - 24 * 60 * 60 * 1000) / 1000,
+			oldest: (Date.now() - 24 * 60 * 60 * 1000) / 1000,
 			inclusive: true,
-			limit: 3,
+			limit: 100,
 		})
-
-		console.log(result)
 
 		if (result.messages.length == 0) {
 			try {
@@ -71,12 +69,12 @@ app.command("/debrief", async ({ ack, body, client }) => {
 	let messageInitial = { generalFeelingInitial: "", lectureInitial: "", challengesInitial: "", studentsInitial: "", studentsByIdInitial: "", takeawaysInitial: "" }
 	let debriefTs, isUpdate, targetChannel, targetChannelId
 
-	console.log(`body.channel_id: ${body.channel_id}`)
-
 	if (body.text.trim() == "update") {
 		await ack(`You're updating the debrief`)
 		messageInitial = await fetchMessage(body.channel_id, body.user_id)
 		debriefTs = messageInitial.ts
+		console.log(`debriefTs: ${debriefTs}`)
+
 		isUpdate = true
 	} else if (body.text.trim()[0] == "#") {
 		await ack(`You're starting today's debrief`)
@@ -99,10 +97,8 @@ app.command("/debrief", async ({ ack, body, client }) => {
 		}
 	} else {
 		await ack(`To start a new debrief, use "/debrief #batch-123-xyz" or to update today's debrief use "/debrief update"`)
-		break
+		messageInitial = null
 	}
-
-	console.log(`targetChannelId: ${targetChannelId}`)
 
 	try {
 		metadata = JSON.stringify({
