@@ -85,7 +85,7 @@ app.command("/debrief", async ({ ack, body, client }) => {
 			isUpdate = false
 			targetChannel = body.text.trim().substring(1)
 			try {
-				const userChannels = await app.users.conversations.list({
+				const userChannels = await client.users.conversations.list({
 					types: "public_channel",
 					user: body.user_id,
 					exclude_archived: true,
