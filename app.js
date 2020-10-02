@@ -428,7 +428,12 @@ app.view("debriefModal", async ({ ack, view, context }) => {
 				blocks: responseToUser,
 				ts: debriefTs,
 			})
-			await ack("All done!")
+			await app.client.chat.postEphemeral({
+				token: process.env.SLACK_BOT_TOKEN,
+				channel: channel,
+				user: user,
+				text: `Debrief updated!`,
+			})
 		} catch (error) {
 			console.error(error)
 		}
@@ -440,7 +445,12 @@ app.view("debriefModal", async ({ ack, view, context }) => {
 				blocks: responseToUser,
 				text: "",
 			})
-			await ack("All done!")
+			await app.client.chat.postEphemeral({
+				token: process.env.SLACK_BOT_TOKEN,
+				channel: channel,
+				user: user,
+				text: `Debrief posted!`,
+			})
 		} catch (error) {
 			console.error(error)
 		}
