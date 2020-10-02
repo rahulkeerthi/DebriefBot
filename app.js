@@ -17,8 +17,6 @@ async function fetchMessage(channel, user) {
 			limit: 1,
 		})
 
-		console.log(result.messages)
-
 		if (result.messages.length == 0) {
 			try {
 				await app.client.chat.postEphemeral({
@@ -30,13 +28,10 @@ async function fetchMessage(channel, user) {
 			} catch (err) {
 				console.error(err)
 			}
-			return false
 		} else {
 			let messages = result.messages.filter(message => {
 				if (message.bot_profile) {
 					return message.bot_profile.name == "DebriefBot"
-				} else {
-					return false
 				}
 			})
 
@@ -83,16 +78,20 @@ app.command("/debrief", async ({ ack, body, client }) => {
 		await ack(`You're starting today's debrief`)
 		isUpdate = false
 		targetChannel = body.text.trim().substring(1)
-		const userChannels = await client.conversations.list({
-			types: "public_channel",
-			exclude_archived: true,
-			token: process.env.SLACK_BOT_TOKEN,
-		})
-		let targetChannelList = userChannels.channels.filter(channel => {
-			return channel.name == targetChannel
-		})
-		if (targetChannelList.length > 0) {
-			targetChannelId = targetChannelList[0].id
+		try {
+			const userChannels = await client.conversations.list({
+				types: "public_channel",
+				exclude_archived: true,
+				token: process.env.SLACK_BOT_TOKEN,
+			})
+			let targetChannelList = userChannels.channels.filter(channel => {
+				return channel.name == targetChannel
+			})
+			if (targetChannelList.length > 0) {
+				targetChannelId = targetChannelList[0].id
+			}
+		} catch (err) {
+			console.error(err)
 		}
 	} else {
 		try {
