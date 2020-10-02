@@ -408,6 +408,16 @@ app.view("debriefModal", async ({ ack, view, context }) => {
 				text: takeaways,
 			},
 		},
+		{
+			type: "divider",
+		},
+		{
+			type: "section",
+			text: {
+				type: "mrkdwn",
+				text: "*That's it! Have a lovely day! DebriefBot over and out!* :drop_the_mic:",
+			},
+		},
 	]
 	responseToUser = JSON.stringify(responseToUser)
 
