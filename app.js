@@ -68,7 +68,6 @@ async function fetchMessage(channel, user) {
 
 app.command("/debrief", async ({ ack, body, client }) => {
 	let messageInitial, debriefTs, isUpdate, targetChannel, targetChannelId
-	await ack()
 	if (body.text.trim() == "update") {
 		await ack(`You're updating the debrief`)
 		messageInitial = await fetchMessage(body.channel_id, body.user_id)
