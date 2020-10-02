@@ -79,6 +79,7 @@ app.command("/debrief", async ({ ack, body, client }) => {
 		messageInitial = await fetchMessage(body.channel_id, body.user_id)
 		if (messageInitial.ts > (Date.now() - 12 * 60 * 60 * 1000) / 1000) {
 			await ack(`There's already a debrief for today, use "/debrief update" instead`)
+			messageInitial = null
 		} else {
 			await ack(`You're starting today's debrief`)
 			messageInitial = { generalFeelingInitial: "", lectureInitial: "", challengesInitial: "", studentsInitial: "", studentsByIdInitial: "", takeawaysInitial: "" }
