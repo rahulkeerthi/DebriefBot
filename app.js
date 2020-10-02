@@ -12,7 +12,7 @@ async function fetchMessage(channel, user) {
 		const result = await app.client.conversations.history({
 			token: process.env.SLACK_BOT_TOKEN,
 			channel: channel,
-			oldest: (Date.now() - 24 * 60 * 60 * 1000) / 1000,
+			// oldest: (Date.now() - 24 * 60 * 60 * 1000) / 1000,
 			inclusive: true,
 			limit: 3,
 		})
@@ -70,7 +70,9 @@ async function fetchMessage(channel, user) {
 app.command("/debrief", async ({ ack, body, client }) => {
 	let messageInitial = { generalFeelingInitial: "", lectureInitial: "", challengesInitial: "", studentsInitial: "", studentsByIdInitial: "", takeawaysInitial: "" }
 	let debriefTs, isUpdate, targetChannel, targetChannelId
-	console.log(body.channel_id)
+
+	console.log(`body.channel_id: ${body.channel_id}`)
+
 	if (body.text.trim() == "update") {
 		await ack(`You're updating the debrief`)
 		messageInitial = await fetchMessage(body.channel_id, body.user_id)
@@ -99,14 +101,16 @@ app.command("/debrief", async ({ ack, body, client }) => {
 		try {
 			await app.client.chat.postEphemeral({
 				token: process.env.SLACK_BOT_TOKEN,
-				channel: channel,
-				user: user,
+				channel: body.channel_id,
+				user: body.user_id,
 				text: `To start a new debrief, use "/debrief #batch-123-xyz" or to update today's debrief use "/debrief update"`,
 			})
 		} catch (err) {
 			console.error(err)
 		}
 	}
+
+	console.log(`targetChannelId: ${targetChannelId}`)
 
 	try {
 		metadata = JSON.stringify({
