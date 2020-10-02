@@ -212,7 +212,7 @@ app.command("/debrief", async ({ ack, body, client }) => {
 					initial_value: messageInitial.studentsInitial,
 					placeholder: {
 						type: "plain_text",
-						text: "Spotting edge cases: really struggling, not following Le Wagon learning spirit (e.g. leaving the buddy in the dust or isolating oneself or refusing any help)",
+						text: "Spotting edge cases: really struggling, not following Le Wagon learning spirit (e.g. leaving buddy behind, isolating oneself, or refusing any help)",
 					},
 					multiline: true,
 				},
