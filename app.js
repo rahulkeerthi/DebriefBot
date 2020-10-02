@@ -98,16 +98,8 @@ app.command("/debrief", async ({ ack, body, client }) => {
 			console.error(err)
 		}
 	} else {
-		try {
-			await app.client.chat.postEphemeral({
-				token: process.env.SLACK_BOT_TOKEN,
-				channel: body.channel_id,
-				user: body.user_id,
-				text: `To start a new debrief, use "/debrief #batch-123-xyz" or to update today's debrief use "/debrief update"`,
-			})
-		} catch (err) {
-			console.error(err)
-		}
+		await ack(`To start a new debrief, use "/debrief #batch-123-xyz" or to update today's debrief use "/debrief update"`)
+		break
 	}
 
 	console.log(`targetChannelId: ${targetChannelId}`)
