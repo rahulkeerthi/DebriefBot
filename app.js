@@ -1,10 +1,11 @@
-const { App } = require("@slack/bolt")
+const { App, LogLevel } = require("@slack/bolt")
 require("dotenv").config()
 
 // Initializes your app with your bot token and signing secret
 const app = new App({
 	token: process.env.SLACK_BOT_TOKEN,
 	signingSecret: process.env.SLACK_SIGNING_SECRET,
+	logLevel: LogLevel.DEBUG,
 })
 
 async function fetchMessage(channel, user) {
@@ -83,19 +84,21 @@ app.command("/debrief", async ({ ack, body, client }) => {
 			messageInitial = { generalFeelingInitial: "", lectureInitial: "", challengesInitial: "", studentsInitial: "", studentsByIdInitial: "", takeawaysInitial: "" }
 			isUpdate = false
 			targetChannel = body.text.trim().substring(1)
-			console.log(`targetChannel: ${targetChannel}`)
 			try {
-				const userChannels = await client.conversations.list({
+				const userChannels = await app.users.conversations.list({
 					types: "public_channel",
+					user: body.user_id,
 					exclude_archived: true,
 					token: process.env.SLACK_BOT_TOKEN,
+					limit: 100,
 				})
-				console.log(`userChannels: ${userChannels[0]}`)
 				let targetChannelList = userChannels.channels.filter(channel => {
 					return channel.name == targetChannel
 				})
 				if (targetChannelList.length > 0) {
 					targetChannelId = targetChannelList[0].id
+				} else {
+					targetChannel = ""
 				}
 			} catch (err) {
 				console.error(err)
