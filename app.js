@@ -14,7 +14,7 @@ async function fetchMessage(channel, user) {
 			channel: channel,
 			oldest: (Date.now() - 24 * 60 * 60 * 1000) / 1000,
 			inclusive: true,
-			limit: 1,
+			limit: 3,
 		})
 
 		console.log(result)
