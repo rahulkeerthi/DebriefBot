@@ -34,31 +34,32 @@ async function fetchMessage(channel, user) {
 					return message.bot_profile.name == "DebriefBot"
 				}
 			})
-
-			let message = messages[0].blocks
-			msg = {
-				generalFeelingInitial: message[4].text.text,
-				lectureInitial: message[6].text.text,
-				challengesInitial: message[8].text.text,
-				studentsInitial: message[10].text.text,
-				studentsByIdInitial: message[11].text.text,
-				takeawaysInitial: message[13].text.text,
-				ts: messages[0].ts,
-			}
-
-			if (msg.studentsByIdInitial != "No students tagged yet") {
-				msg.studentsByIdInitial = msg.studentsByIdInitial.match(/[0-9A-Z]+/g)
-			}
-			Object.keys(msg).forEach(key => {
-				if (msg[key] == "No students tagged yet") {
-					msg[key] = ""
-				} else if (msg[key] == "No input provided yet") {
-					msg[key] = ""
-				} else {
-					return
+			if (messages.length > 0) {
+				let message = messages[0].blocks
+				msg = {
+					generalFeelingInitial: message[4].text.text,
+					lectureInitial: message[6].text.text,
+					challengesInitial: message[8].text.text,
+					studentsInitial: message[10].text.text,
+					studentsByIdInitial: message[11].text.text,
+					takeawaysInitial: message[13].text.text,
+					ts: messages[0].ts,
 				}
-			})
-			return msg
+
+				if (msg.studentsByIdInitial != "No students tagged yet") {
+					msg.studentsByIdInitial = msg.studentsByIdInitial.match(/[0-9A-Z]+/g)
+				}
+				Object.keys(msg).forEach(key => {
+					if (msg[key] == "No students tagged yet") {
+						msg[key] = ""
+					} else if (msg[key] == "No input provided yet") {
+						msg[key] = ""
+					} else {
+						return
+					}
+				})
+				return msg
+			}
 		}
 	} catch (error) {
 		console.error(error)
@@ -76,8 +77,8 @@ app.command("/debrief", async ({ ack, body, client }) => {
 
 		isUpdate = true
 	} else if (body.text.trim()[0] == "#") {
-		messageInitial = await fetchMessage(body.channel_id, body.user_id)
-		if (messageInitial.ts > (Date.now() - 12 * 60 * 60 * 1000) / 1000) {
+		messageInitial = (await fetchMessage(body.channel_id, body.user_id)) || null
+		if (messageInitial && messageInitial.ts > (Date.now() - 12 * 60 * 60 * 1000) / 1000) {
 			await ack(`There's already a debrief for today, use "/debrief update" instead`)
 			messageInitial = null
 		} else {
