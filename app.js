@@ -86,6 +86,7 @@ app.command("/debrief", async ({ ack, body, client }) => {
 				exclude_archived: true,
 				token: process.env.SLACK_BOT_TOKEN,
 			})
+			console.log(`userChannels: ${userChannels}`)
 			let targetChannelList = userChannels.channels.filter(channel => {
 				return channel.name == targetChannel
 			})
