@@ -68,13 +68,11 @@ async function fetchMessage(channel, user) {
 
 app.command("/debrief", async ({ ack, body, client }) => {
 	let messageInitial, debriefTs, isUpdate, targetChannel, targetChannelId
-
+	await ack()
 	if (body.text.trim() == "update") {
 		await ack(`You're updating the debrief`)
 		messageInitial = await fetchMessage(body.channel_id, body.user_id)
 		debriefTs = messageInitial.ts
-		console.log(`debriefTs: ${debriefTs}`)
-
 		isUpdate = true
 	} else if (body.text.trim()[0] == "#") {
 		messageInitial = (await fetchMessage(body.channel_id, body.user_id)) || null
@@ -86,13 +84,14 @@ app.command("/debrief", async ({ ack, body, client }) => {
 			messageInitial = { generalFeelingInitial: "", lectureInitial: "", challengesInitial: "", studentsInitial: "", studentsByIdInitial: "", takeawaysInitial: "" }
 			isUpdate = false
 			targetChannel = body.text.trim().substring(1)
+			console.log(`targetChannel: ${targetChannel}`)
 			try {
 				const userChannels = await client.conversations.list({
 					types: "public_channel",
 					exclude_archived: true,
 					token: process.env.SLACK_BOT_TOKEN,
 				})
-				console.log(`userChannels: ${userChannels}`)
+				console.log(`userChannels: ${userChannels[0]}`)
 				let targetChannelList = userChannels.channels.filter(channel => {
 					return channel.name == targetChannel
 				})
