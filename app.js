@@ -108,6 +108,13 @@ app.command("/debrief", async ({ ack, body, client }) => {
 			user: body.user_id,
 			targetChannelId: targetChannelId,
 		})
+
+		let introMessage
+		if (targetChannel) {
+			introMessage = `Let's get started with today's debrief${targetChannel == "" ? "!" : ` for <#${targetChannelId}>`}`
+		} else {
+			introMessage = `Let's update today's debrief!`
+		}
 		let blocks = [
 			{
 				type: "context",
@@ -123,7 +130,7 @@ app.command("/debrief", async ({ ack, body, client }) => {
 				type: "section",
 				text: {
 					type: "mrkdwn",
-					text: `Hello, <@${body.user_id}>! Let's get started with today's debrief${targetChannel == "" ? "!" : ` for <#${targetChannelId}>`}`,
+					text: `Hello, <@${body.user_id}>! ${introMessage}`,
 				},
 			},
 			{
@@ -414,6 +421,7 @@ app.view("debriefModal", async ({ ack, view, context }) => {
 				blocks: responseToUser,
 				ts: debriefTs,
 			})
+			await ack("All done!")
 		} catch (error) {
 			console.error(error)
 		}
@@ -425,6 +433,7 @@ app.view("debriefModal", async ({ ack, view, context }) => {
 				blocks: responseToUser,
 				text: "",
 			})
+			await ack("All done!")
 		} catch (error) {
 			console.error(error)
 		}
