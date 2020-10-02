@@ -152,7 +152,7 @@ app.command("/debrief", async ({ ack, body, client }) => {
 					initial_value: messageInitial.generalFeelingInitial,
 					placeholder: {
 						type: "plain_text",
-						text: "How are the students doing in terms of general engagement, productivity, and enthusiasm? Any specifics to celebrate or mark as a concern?",
+						text: "Note any tensions or the general mood of the batch",
 					},
 					multiline: true,
 				},
@@ -172,13 +172,13 @@ app.command("/debrief", async ({ ack, body, client }) => {
 					initial_value: messageInitial.lectureInitial,
 					placeholder: {
 						type: "plain_text",
-						text: "How did the lecture and livecode go in terms of conduct, engagement and understanding? Any areas for reinforcement or attention in the future?",
+						text: "How did you feel about them? How about your students' engagement and understanding?",
 					},
 					multiline: true,
 				},
 				label: {
 					type: "plain_text",
-					text: "Lectures:",
+					text: "Lecture & Livecode:",
 					emoji: true,
 				},
 			},
@@ -192,7 +192,7 @@ app.command("/debrief", async ({ ack, body, client }) => {
 					initial_value: messageInitial.challengesInitial,
 					placeholder: {
 						type: "plain_text",
-						text: "What recurring issues and tickets were students having today? Are there any potential issues or areas of improvement for the challenges of the day?",
+						text: "Queue monitoring, recurring themes and/or difficulties",
 					},
 					multiline: true,
 				},
@@ -212,7 +212,7 @@ app.command("/debrief", async ({ ack, body, client }) => {
 					initial_value: messageInitial.studentsInitial,
 					placeholder: {
 						type: "plain_text",
-						text: "Which students are struggling and need additional attention? Any unusual absences or behaviour? Any follow-up activity required for the next session?",
+						text: "Spotting edge cases: really struggling, not following Le Wagon learning spirit (e.g. leaving the buddy in the dust or isolating oneself or refusing any help)",
 					},
 					multiline: true,
 				},
@@ -252,7 +252,7 @@ app.command("/debrief", async ({ ack, body, client }) => {
 					initial_value: messageInitial.takeawaysInitial,
 					placeholder: {
 						type: "plain_text",
-						text: "What can improve today's lesson for future batches? What lessons learned are there for the team? What suggestions can we make for the next session?",
+						text: "What actionable advice do you have for next day's staff? (e.g. reiterate to create tickets if students are stuck for more than 15 minutes)",
 					},
 					multiline: true,
 				},
@@ -325,7 +325,7 @@ app.view("debriefModal", async ({ ack, view, context }) => {
 			type: "section",
 			text: {
 				type: "mrkdwn",
-				text: `Here's a summary of today's debrief (last updated: ${new Date().toLocaleString("en-GB", options)}):`,
+				text: `Here's a summary of today's debrief (last updated: ${new Date().toLocaleString("en-GB", options)} by $<@${user}>):`,
 			},
 		},
 		{
@@ -335,7 +335,7 @@ app.view("debriefModal", async ({ ack, view, context }) => {
 			type: "section",
 			text: {
 				type: "mrkdwn",
-				text: ":rocket: *General feeling about the batch*",
+				text: "*General Feeling About the Batch* :rocket:",
 			},
 		},
 		{
@@ -349,7 +349,7 @@ app.view("debriefModal", async ({ ack, view, context }) => {
 			type: "section",
 			text: {
 				type: "mrkdwn",
-				text: ":microphone: :livecode: *Lectures and Livecode*",
+				text: "*Lectures and Livecode* :microphone: :livecode:",
 			},
 		},
 		{
@@ -363,7 +363,7 @@ app.view("debriefModal", async ({ ack, view, context }) => {
 			type: "section",
 			text: {
 				type: "mrkdwn",
-				text: ":thinking: *Challenges and Tickets*",
+				text: "*Challenges and Tickets* :thinking:",
 			},
 		},
 		{
@@ -377,7 +377,7 @@ app.view("debriefModal", async ({ ack, view, context }) => {
 			type: "section",
 			text: {
 				type: "mrkdwn",
-				text: ":male-student: :female-student: *Students*",
+				text: "*Students* :male-student: :female-student:",
 			},
 		},
 		{
@@ -398,7 +398,7 @@ app.view("debriefModal", async ({ ack, view, context }) => {
 			type: "section",
 			text: {
 				type: "mrkdwn",
-				text: ":takeout_box: *General takeaways*",
+				text: "*General takeaways* :takeout_box:",
 			},
 		},
 		{
