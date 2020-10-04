@@ -325,7 +325,7 @@ app.view("debriefModal", async ({ ack, view, context }) => {
 			type: "section",
 			text: {
 				type: "mrkdwn",
-				text: `Here's a summary of today's debrief (last updated: <!date^${new Date() / 1000}^{date_short_pretty} {time}|${new Date().toLocaleString("en-GB", options)} UTC> by <@${user}>):`,
+				text: `Here's a summary of today's debrief (last updated: <!date^${Math.round(new Date() / 1000)}^{date_short_pretty} {time}|${new Date().toLocaleString("en-GB", options)} UTC> by <@${user}>):`,
 			},
 		},
 		{
