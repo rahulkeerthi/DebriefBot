@@ -69,9 +69,13 @@ async function fetchMessage(channel, user) {
 
 app.command("/debrief", async ({ ack, body, client }) => {
 	let messageInitial, debriefTs, isUpdate, targetChannel, targetChannelId
-	if (body.text.trim() == "update") {
+	messageInitial = await fetchMessage(body.channel_id, body.user_id)
+	if (body.text.trim() == "update" && messageInitial.ts > (Date.now() - 18 * 60 * 60 * 1000) / 1000) {
+		await ack(`No recent (last 18h) debrief available. Please start a new one with "/debrief #batch-123-city`)
+		debriefTs = messageInitial.ts
+		isUpdate = true
+	} else if (body.text.trim() == "update") {
 		await ack(`You're updating the debrief`)
-		messageInitial = await fetchMessage(body.channel_id, body.user_id)
 		debriefTs = messageInitial.ts
 		isUpdate = true
 	} else if (body.text.trim()[0] == "#") {
