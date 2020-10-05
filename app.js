@@ -24,7 +24,7 @@ async function fetchMessage(channel, user) {
 		// 			token: process.env.SLACK_BOT_TOKEN,
 		// 			channel: channel,
 		// 			user: user,
-		// 			text: `No recent (last 24h) debrief available. Please start a new one with "/debrief #batch-123-city"`,
+		// 			text: `No recent (last 24h) debrief available. Please start a new one with "/debrief"`,
 		// 		})
 		// 	} catch (err) {
 		// 		console.error(err)
@@ -70,7 +70,7 @@ async function fetchMessage(channel, user) {
 app.command("/debrief", async ({ ack, body, client }) => {
 	let messageInitial, debriefTs, isUpdate //, targetChannel, targetChannelId
 	messageInitial = await fetchMessage(body.channel_id, body.user_id)
-	if (body.text.trim() == "update" && messageInitial.ts > (Date.now() - 18 * 60 * 60 * 1000) / 1000) {
+	if (body.text.trim() == "update" && messageInitial.ts < (Date.now() - 18 * 60 * 60 * 1000) / 1000) {
 		await ack(`No recent (last 18h) debrief available. Please start a new one with "/debrief`)
 		debriefTs = messageInitial.ts
 		isUpdate = false
