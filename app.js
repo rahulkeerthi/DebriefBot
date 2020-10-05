@@ -68,10 +68,10 @@ async function fetchMessage(channel, user) {
 }
 
 app.command("/debrief", async ({ ack, body, client }) => {
-	let messageInitial, debriefTs, isUpdate, targetChannel, targetChannelId
+	let messageInitial, debriefTs, isUpdate //, targetChannel, targetChannelId
 	messageInitial = await fetchMessage(body.channel_id, body.user_id)
 	if (body.text.trim() == "update" && messageInitial.ts > (Date.now() - 18 * 60 * 60 * 1000) / 1000) {
-		await ack(`No recent (last 18h) debrief available. Please start a new one with "/debrief #batch-123-city`)
+		await ack(`No recent (last 18h) debrief available. Please start a new one with "/debrief`)
 		debriefTs = messageInitial.ts
 		isUpdate = false
 		messageInitial = null
@@ -79,7 +79,7 @@ app.command("/debrief", async ({ ack, body, client }) => {
 		await ack(`You're updating the debrief`)
 		debriefTs = messageInitial.ts
 		isUpdate = true
-	} else if (body.text.trim()[0] == "#") {
+	} else if (body.text.trim() != "update") {
 		messageInitial = (await fetchMessage(body.channel_id, body.user_id)) || null
 		if (messageInitial && messageInitial.ts > (Date.now() - 12 * 60 * 60 * 1000) / 1000) {
 			await ack(`There's already a debrief for today, use "/debrief update" instead`)
@@ -88,29 +88,29 @@ app.command("/debrief", async ({ ack, body, client }) => {
 			await ack(`You're starting today's debrief`)
 			messageInitial = { generalFeelingInitial: "", lectureInitial: "", challengesInitial: "", studentsInitial: "", studentsByIdInitial: "", takeawaysInitial: "" }
 			isUpdate = false
-			targetChannel = body.text.trim().substring(1)
-			try {
-				const userChannels = await client.users.conversations({
-					types: "public_channel",
-					user: body.user_id,
-					exclude_archived: true,
-					token: process.env.SLACK_BOT_TOKEN,
-					limit: 100,
-				})
-				let targetChannelList = userChannels.channels.filter(channel => {
-					return channel.name == targetChannel
-				})
-				if (targetChannelList.length > 0) {
-					targetChannelId = targetChannelList[0].id
-				} else {
-					targetChannel = ""
-				}
-			} catch (err) {
-				console.error(err)
-			}
+			// targetChannel = body.text.trim().substring(1)
+			// try {
+			// 	const userChannels = await client.users.conversations({
+			// 		types: "public_channel",
+			// 		user: body.user_id,
+			// 		exclude_archived: true,
+			// 		token: process.env.SLACK_BOT_TOKEN,
+			// 		limit: 100,
+			// 	})
+			// 	let targetChannelList = userChannels.channels.filter(channel => {
+			// 		return channel.name == targetChannel
+			// 	})
+			// 	if (targetChannelList.length > 0) {
+			// 		targetChannelId = targetChannelList[0].id
+			// 	} else {
+			// 		targetChannel = ""
+			// 	}
+			// } catch (err) {
+			// 	console.error(err)
+			// }
 		}
 	} else {
-		await ack(`To start a new debrief, use "/debrief #batch-123-xyz" or to update today's debrief use "/debrief update"`)
+		await ack(`To start a new debrief, use "/debrief" or to update today's debrief use "/debrief update"`)
 		messageInitial = null
 	}
 
@@ -120,12 +120,13 @@ app.command("/debrief", async ({ ack, body, client }) => {
 			debriefTs: debriefTs,
 			isUpdate: isUpdate,
 			user: body.user_id,
-			targetChannelId: targetChannelId,
+			// targetChannelId: targetChannelId,
 		})
 
 		let introMessage
-		if (targetChannel) {
-			introMessage = `Let's get started with today's debrief${targetChannel == "" ? "!" : ` for <#${targetChannelId}>`}`
+		if (isUpdate) {
+			introMessage = `Let's get started with today's debrief!`
+			// introMessage = `Let's get started with today's debrief${targetChannel == "" ? "!" : ` for <#${targetChannelId}>`}`
 		} else {
 			introMessage = `Let's update today's debrief!`
 		}
@@ -304,7 +305,7 @@ app.command("/debrief", async ({ ack, body, client }) => {
 app.view("debriefModal", async ({ ack, view, context }) => {
 	await ack()
 	const values = view.state.values
-	const { channel, debriefTs, isUpdate, user, targetChannelId } = JSON.parse(view.private_metadata)
+	const { channel, debriefTs, isUpdate, user } = JSON.parse(view.private_metadata)
 	let generalFeeling = values.generalFeeling.generalFeelingInput.value || "No input provided yet"
 	let lecture = values.lecture.lectureInput.value || "No input provided yet"
 	let challenges = values.challenges.challengesInput.value || "No input provided yet"
@@ -432,7 +433,7 @@ app.view("debriefModal", async ({ ack, view, context }) => {
 				token: process.env.SLACK_BOT_TOKEN,
 				channel: channel,
 				user: user,
-				text: `Last Debrief is older than 18 hours. Please start a new one with /debrief #batch-123-city`,
+				text: `Last Debrief is older than 18 hours. Please start a new one with /debrief`,
 			})
 		} catch (err) {
 			console.error(err)
