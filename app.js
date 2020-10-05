@@ -73,7 +73,8 @@ app.command("/debrief", async ({ ack, body, client }) => {
 	if (body.text.trim() == "update" && messageInitial.ts > (Date.now() - 18 * 60 * 60 * 1000) / 1000) {
 		await ack(`No recent (last 18h) debrief available. Please start a new one with "/debrief #batch-123-city`)
 		debriefTs = messageInitial.ts
-		isUpdate = true
+		isUpdate = false
+		messageInitial = null
 	} else if (body.text.trim() == "update") {
 		await ack(`You're updating the debrief`)
 		debriefTs = messageInitial.ts
