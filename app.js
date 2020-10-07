@@ -20,6 +20,8 @@ async function fetchMessage(channel) {
 			limit: 100,
 		})
 
+		console.log(`fetch result: ${result.messages}`)
+
 		// filters messages sent by DebriefBot
 		let messages = result.messages.filter(message => {
 			if (message.bot_profile) {
