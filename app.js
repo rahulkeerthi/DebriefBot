@@ -66,7 +66,7 @@ async function fetchMessage(channel) {
 
 app.command("/debrief", async ({ ack, body, client }) => {
 	let messageInitial, debriefTs, isUpdate
-	messageInitial = await fetchMessage(body.channel_id, body.user_id)
+	messageInitial = await fetchMessage(body.channel_id)
 	if (body.text.trim() == "update" && messageInitial.ts < (Date.now() - 18 * 60 * 60 * 1000) / 1000) {
 		await ack(`No recent (last 18h) debrief available. Please start a new one with "/debrief`)
 		// debriefTs = messageInitial.ts
