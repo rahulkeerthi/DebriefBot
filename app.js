@@ -20,10 +20,11 @@ async function fetchMessage(channel) {
 			limit: 100,
 		})
 
+		// set up regex to avoid picking up debriefbot "debrief updated" messages
+		let testRegex = /\bsummary\b/g
 		// filters messages sent by DebriefBot
 		let messages = result.messages.filter(message => {
 			if (message.bot_profile) {
-				testRegex = /\bsummary\b/g
 				return message.bot_profile.name == "DebriefBot" && testRegex.test(message.text)
 			}
 		})
@@ -67,17 +68,18 @@ async function fetchMessage(channel) {
 
 // listens for and responds to /debrief slash command
 app.command("/debrief", async ({ ack, body, client }) => {
-	let messageInitial, debriefTs, isUpdate
+	let debriefTs
+	let isUpdate = false
 	// fetch any previous debrief if available
-	messageInitial = await fetchMessage(body.channel_id)
+	let messageInitial = await fetchMessage(body.channel_id)
 
 	// decide what to do based on slash command instructions and timestamp of debrief
 	if (body.text.trim() == "update" && messageInitial && messageInitial.ts < (Date.now() - 18 * 60 * 60 * 1000) / 1000) {
 		await ack(`No recent (last 18h) debrief available. Please start a new one with "/debrief`)
 		// debriefTs = messageInitial.ts
-		isUpdate = false
+		// isUpdate = false
 		// messageInitial = null
-	} else if (body.text.trim() == "update") {
+	} else if (body.text.trim() == "update" && messageInitial) {
 		await ack(`You're updating the debrief`)
 		debriefTs = messageInitial.ts
 		isUpdate = true
@@ -85,17 +87,15 @@ app.command("/debrief", async ({ ack, body, client }) => {
 		// messageInitial = (await fetchMessage(body.channel_id, body.user_id)) || null
 		// if (messageInitial && messageInitial.ts > (Date.now() - 12 * 60 * 60 * 1000) / 1000) {
 		await ack(`There's already a debrief for today, use "/debrief update" instead`)
-		isUpdate = false
+		// isUpdate = false
 		// messageInitial = null
-	} else {
+	} else if (!messageInitial) {
 		await ack(`You're starting today's debrief`)
 		messageInitial = { generalFeelingInitial: "", lectureInitial: "", challengesInitial: "", studentsInitial: "", studentsByIdInitial: "", takeawaysInitial: "" }
-		isUpdate = false
+		// isUpdate = false
+	} else {
+		await ack(`To start a new debrief, use "/debrief" or to update today's debrief use "/debrief update"`)
 	}
-	// } else {
-	// 	await ack(`To start a new debrief, use "/debrief" or to update today's debrief use "/debrief update"`)
-	// 	messageInitial = null
-	// }
 
 	try {
 		if (messageInitial) {
@@ -284,6 +284,7 @@ app.view("debriefModal", async ({ ack, view, context }) => {
 	const token = context.botToken
 	const values = view.state.values
 	const { channel, debriefTs, isUpdate, user } = JSON.parse(view.private_metadata)
+	// prepare block data for a posted message using either existing values or default text if left blank
 	let generalFeeling = values.generalFeeling.generalFeelingInput.value || "No input provided yet"
 	let lecture = values.lecture.lectureInput.value || "No input provided yet"
 	let challenges = values.challenges.challengesInput.value || "No input provided yet"
@@ -292,11 +293,12 @@ app.view("debriefModal", async ({ ack, view, context }) => {
 	let studentsById = values.studentsById.studentsByIdInput.selected_users || []
 	let studentsList = ""
 	if (studentsById.length > 0) {
+		// construct unordered list of students using user mention formatting
 		studentsList = studentsById.map(studentId => `• <@${studentId}>\n`).join("")
 	} else {
 		studentsList = "No students tagged yet"
 	}
-	let options = { hour12: true }
+	// construct stringified blocks to post as debrief message
 	let responseToUser = JSON.stringify([
 		{
 			type: "section",
@@ -309,7 +311,7 @@ app.view("debriefModal", async ({ ack, view, context }) => {
 			type: "section",
 			text: {
 				type: "mrkdwn",
-				text: `Here's a summary of today's debrief (last updated: <!date^${Math.round(new Date() / 1000)}^{date_short_pretty} {time}|${new Date().toLocaleString("en-GB", options)} UTC> by <@${user}>):`,
+				text: `Here's a summary of today's debrief (last updated: <!date^${Math.round(new Date() / 1000)}^{date_short_pretty} {time}|${new Date().toLocaleString("en-GB", { hour12: true })} UTC> by <@${user}>):`,
 			},
 		},
 		{
@@ -406,6 +408,7 @@ app.view("debriefModal", async ({ ack, view, context }) => {
 
 	if (isUpdate && debriefTs < (Date.now() - 18 * 60 * 60 * 1000) / 1000) {
 		try {
+			// if for some reason modal was left open for a long time before submitting, prevent update
 			await app.client.chat.postEphemeral({
 				token: token,
 				channel: channel,
@@ -415,6 +418,7 @@ app.view("debriefModal", async ({ ack, view, context }) => {
 		} catch (err) {
 			console.error(err)
 		}
+		// check if this is an update or not to choose the right action (chat.update vs chat.postMessage)
 	} else if (isUpdate) {
 		try {
 			await app.client.chat.update({
