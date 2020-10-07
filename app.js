@@ -18,18 +18,6 @@ async function fetchMessage(channel, user) {
 			limit: 100,
 		})
 
-		// if (result.messages.length == 0) {
-		// 	try {
-		// 		await app.client.chat.postEphemeral({
-		// 			token: process.env.SLACK_BOT_TOKEN,
-		// 			channel: channel,
-		// 			user: user,
-		// 			text: `No recent (last 24h) debrief available. Please start a new one with "/debrief"`,
-		// 		})
-		// 	} catch (err) {
-		// 		console.error(err)
-		// 	}
-		// } else {
 		let messages = result.messages.filter(message => {
 			if (message.bot_profile) {
 				return message.bot_profile.name == "DebriefBot"
@@ -61,14 +49,13 @@ async function fetchMessage(channel, user) {
 			})
 			return msg
 		}
-		// }
 	} catch (error) {
 		console.error(error)
 	}
 }
 
 app.command("/debrief", async ({ ack, body, client }) => {
-	let messageInitial, debriefTs, isUpdate //, targetChannel, targetChannelId
+	let messageInitial, debriefTs, isUpdate
 	messageInitial = await fetchMessage(body.channel_id, body.user_id)
 	if (body.text.trim() == "update" && messageInitial.ts < (Date.now() - 18 * 60 * 60 * 1000) / 1000) {
 		await ack(`No recent (last 18h) debrief available. Please start a new one with "/debrief`)
@@ -79,40 +66,20 @@ app.command("/debrief", async ({ ack, body, client }) => {
 		await ack(`You're updating the debrief`)
 		debriefTs = messageInitial.ts
 		isUpdate = true
-	} else if (body.text.trim() != "update") {
-		messageInitial = (await fetchMessage(body.channel_id, body.user_id)) || null
-		if (messageInitial && messageInitial.ts > (Date.now() - 12 * 60 * 60 * 1000) / 1000) {
-			await ack(`There's already a debrief for today, use "/debrief update" instead`)
-			messageInitial = null
-		} else {
-			await ack(`You're starting today's debrief`)
-			messageInitial = { generalFeelingInitial: "", lectureInitial: "", challengesInitial: "", studentsInitial: "", studentsByIdInitial: "", takeawaysInitial: "" }
-			isUpdate = false
-			// targetChannel = body.text.trim().substring(1)
-			// try {
-			// 	const userChannels = await client.users.conversations({
-			// 		types: "public_channel",
-			// 		user: body.user_id,
-			// 		exclude_archived: true,
-			// 		token: process.env.SLACK_BOT_TOKEN,
-			// 		limit: 100,
-			// 	})
-			// 	let targetChannelList = userChannels.channels.filter(channel => {
-			// 		return channel.name == targetChannel
-			// 	})
-			// 	if (targetChannelList.length > 0) {
-			// 		targetChannelId = targetChannelList[0].id
-			// 	} else {
-			// 		targetChannel = ""
-			// 	}
-			// } catch (err) {
-			// 	console.error(err)
-			// }
-		}
-	} else {
-		await ack(`To start a new debrief, use "/debrief" or to update today's debrief use "/debrief update"`)
+	} else if (messageInitial && messageInitial.ts > (Date.now() - 12 * 60 * 60 * 1000) / 1000) {
+		// messageInitial = (await fetchMessage(body.channel_id, body.user_id)) || null
+		// if (messageInitial && messageInitial.ts > (Date.now() - 12 * 60 * 60 * 1000) / 1000) {
+		await ack(`There's already a debrief for today, use "/debrief update" instead`)
 		messageInitial = null
+	} else {
+		await ack(`You're starting today's debrief`)
+		messageInitial = { generalFeelingInitial: "", lectureInitial: "", challengesInitial: "", studentsInitial: "", studentsByIdInitial: "", takeawaysInitial: "" }
+		isUpdate = false
 	}
+	// } else {
+	// 	await ack(`To start a new debrief, use "/debrief" or to update today's debrief use "/debrief update"`)
+	// 	messageInitial = null
+	// }
 
 	try {
 		metadata = JSON.stringify({
@@ -120,16 +87,10 @@ app.command("/debrief", async ({ ack, body, client }) => {
 			debriefTs: debriefTs,
 			isUpdate: isUpdate,
 			user: body.user_id,
-			// targetChannelId: targetChannelId,
 		})
 
 		let introMessage
-		if (isUpdate) {
-			introMessage = `Let's get started with today's debrief!`
-			// introMessage = `Let's get started with today's debrief${targetChannel == "" ? "!" : ` for <#${targetChannelId}>`}`
-		} else {
-			introMessage = `Let's update today's debrief!`
-		}
+		isUpdate ? (introMessage = `Let's update today's debrief!`) : (introMessage = `Let's get started with today's debrief!`)
 		let blocks = [
 			{
 				type: "context",
@@ -433,7 +394,7 @@ app.view("debriefModal", async ({ ack, view, context }) => {
 				token: process.env.SLACK_BOT_TOKEN,
 				channel: channel,
 				user: user,
-				text: `Last Debrief is older than 18 hours. Please start a new one with /debrief`,
+				text: `Last debrief is older than 18 hours. Please start a new one with /debrief`,
 			})
 		} catch (err) {
 			console.error(err)
@@ -446,11 +407,15 @@ app.view("debriefModal", async ({ ack, view, context }) => {
 				blocks: responseToUser,
 				ts: debriefTs,
 			})
-			await app.client.chat.postEphemeral({
+			const getPermalink = await app.client.chat.getPermalink({
+				token: context.botToken,
+				channel: channel,
+				ts: debriefTs,
+			})
+			await app.client.chat.postMessage({
 				token: process.env.SLACK_BOT_TOKEN,
 				channel: channel,
-				user: user,
-				text: `Debrief updated!`,
+				text: `Today's debrief has been updated! You can see it <${getPermalink.permalink}|*here*>`,
 			})
 		} catch (error) {
 			console.error(error)
@@ -467,7 +432,7 @@ app.view("debriefModal", async ({ ack, view, context }) => {
 				token: process.env.SLACK_BOT_TOKEN,
 				channel: channel,
 				user: user,
-				text: `Debrief posted!`,
+				text: `Today's debrief is on its way! :star-struck:`,
 			})
 		} catch (error) {
 			console.error(error)

@@ -1,10 +1,16 @@
-# gitignore
-/debriefStore.js
-/fetchMessage.js
-/mongoCrud.js
+# archived files and code
+/archive
 
+# vscode settings files
 .vscode/
+
+# Node Modules
 node_modules/
+
+# ENV config vars file
 .env
+
+# Any json files (package-lock or temp json request/response extracts
 /*.json
-!package.json
+# but make sure package.json is always included
+!package.json 
