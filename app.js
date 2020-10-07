@@ -25,7 +25,8 @@ async function fetchMessage(channel) {
 		// filters messages sent by DebriefBot
 		let messages = result.messages.filter(message => {
 			if (message.bot_profile) {
-				return message.bot_profile.name == "DebriefBot" && message.text.includes(/summary of today's debrief/g)
+				testRegex = /\bsummary\b/g
+				return message.bot_profile.name == "DebriefBot" && testRegex.test(message.text)
 			}
 		})
 
