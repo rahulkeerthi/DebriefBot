@@ -1,10 +1,12 @@
 const { App, LogLevel } = require("@slack/bolt")
 require("dotenv").config()
 
+let slackBotToken = process.env.NODE_ENV === "dev" ? process.env.SLACK_BOT_TOKEN_DEV : process.env.SLACK_BOT_TOKEN
+let slackSigningSecret = process.env.NODE_ENV === "dev" ? process.env.SLACK_SIGNING_SECRET_DEV : process.env.SLACK_SIGNING_SECRET
 // Initializes your app with your bot token and signing secret
 const app = new App({
-	token: process.env.SLACK_BOT_TOKEN,
-	signingSecret: process.env.SLACK_SIGNING_SECRET,
+	token: slackBotToken,
+	signingSecret: slackSigningSecret,
 	logLevel: LogLevel.DEBUG,
 })
 
@@ -13,19 +15,17 @@ async function fetchMessage(channel) {
 	try {
 		// fetch last 100 messages from channel
 		const result = await app.client.conversations.history({
-			token: process.env.SLACK_BOT_TOKEN,
+			token: slackBotToken,
 			channel: channel,
 			oldest: (Date.now() - 24 * 60 * 60 * 1000) / 1000,
 			inclusive: true,
 			limit: 100,
 		})
 
-		// set up regex to avoid picking up debriefbot "debrief updated" messages
-		let testRegex = /\bsummary\b/g
 		// filters messages sent by DebriefBot
 		let messages = result.messages.filter(message => {
-			if (message.bot_profile) {
-				return message.bot_profile.name == "DebriefBot" && testRegex.test(message.text)
+			if (message.bot_profile && message.blocks) {
+				return message.bot_profile.name == "DebriefBot"
 			}
 		})
 
@@ -76,23 +76,21 @@ app.command("/debrief", async ({ ack, body, client }) => {
 	// decide what to do based on slash command instructions and timestamp of debrief
 	if (body.text.trim() == "update" && messageInitial && messageInitial.ts < (Date.now() - 18 * 60 * 60 * 1000) / 1000) {
 		await ack(`No recent (last 18h) debrief available. Please start a new one with "/debrief`)
-		// debriefTs = messageInitial.ts
-		// isUpdate = false
-		// messageInitial = null
 	} else if (body.text.trim() == "update" && messageInitial) {
 		await ack(`You're updating the debrief`)
 		debriefTs = messageInitial.ts
 		isUpdate = true
+	} else if (body.text.trim() == "update" && !messageInitial) {
+		await ack(`No recent (last 18h) debrief available. Please start a new one with "/debrief`)
+	} else if (body.text && body.text.trim() !== "update") {
+		await ack(`Not sure about that. Did you mean to use "/debrief update"?`)
+		messageInitial = null
 	} else if (messageInitial && messageInitial.ts > (Date.now() - 12 * 60 * 60 * 1000) / 1000) {
-		// messageInitial = (await fetchMessage(body.channel_id, body.user_id)) || null
-		// if (messageInitial && messageInitial.ts > (Date.now() - 12 * 60 * 60 * 1000) / 1000) {
 		await ack(`There's already a debrief for today, use "/debrief update" instead`)
-		// isUpdate = false
-		// messageInitial = null
+		messageInitial = null
 	} else if (!messageInitial) {
 		await ack(`You're starting today's debrief`)
 		messageInitial = { generalFeelingInitial: "", lectureInitial: "", challengesInitial: "", studentsInitial: "", studentsByIdInitial: "", takeawaysInitial: "" }
-		// isUpdate = false
 	} else {
 		await ack(`To start a new debrief, use "/debrief" or to update today's debrief use "/debrief update"`)
 	}
@@ -279,9 +277,8 @@ app.command("/debrief", async ({ ack, body, client }) => {
 	}
 })
 
-app.view("debriefModal", async ({ ack, view, context }) => {
+app.view("debriefModal", async ({ ack, view }) => {
 	await ack()
-	const token = context.botToken
 	const values = view.state.values
 	const { channel, debriefTs, isUpdate, user } = JSON.parse(view.private_metadata)
 	// prepare block data for a posted message using either existing values or default text if left blank
@@ -410,7 +407,7 @@ app.view("debriefModal", async ({ ack, view, context }) => {
 		try {
 			// if for some reason modal was left open for a long time before submitting, prevent update
 			await app.client.chat.postEphemeral({
-				token: token,
+				token: slackBotToken,
 				channel: channel,
 				user: user,
 				text: `Last debrief is older than 18 hours. Please start a new one with /debrief`,
@@ -422,19 +419,19 @@ app.view("debriefModal", async ({ ack, view, context }) => {
 	} else if (isUpdate) {
 		try {
 			await app.client.chat.update({
-				token: token,
+				token: slackBotToken,
 				channel: channel,
 				blocks: responseToUser,
 				ts: debriefTs,
 				as_user: true,
 			})
 			const getPermalinkResponse = await app.client.chat.getPermalink({
-				token: token,
+				token: slackBotToken,
 				channel: channel,
 				message_ts: debriefTs,
 			})
 			await app.client.chat.postMessage({
-				token: token,
+				token: slackBotToken,
 				channel: channel,
 				text: `Today's debrief has been updated! You can see it <${getPermalinkResponse.permalink}|*here*>`,
 			})
@@ -444,13 +441,13 @@ app.view("debriefModal", async ({ ack, view, context }) => {
 	} else {
 		try {
 			await app.client.chat.postEphemeral({
-				token: token,
+				token: slackBotToken,
 				channel: channel,
 				user: user,
 				text: `Today's debrief is on its way! :star-struck:`,
 			})
 			await app.client.chat.postMessage({
-				token: token,
+				token: slackBotToken,
 				channel: channel,
 				blocks: responseToUser,
 				text: "",
