@@ -401,20 +401,18 @@ app.view("debriefModal", async ({ ack, view, context }) => {
 		}
 	} else if (isUpdate) {
 		try {
-			const updateResponse = await app.client.chat.update({
+			await app.client.chat.update({
 				token: token,
 				channel: channel,
 				blocks: responseToUser,
 				ts: debriefTs,
 				as_user: true,
 			})
-			const updatedTs = updateResponse.ts
 			const getPermalinkResponse = await app.client.chat.getPermalink({
 				token: token,
 				channel: channel,
-				ts: updatedTs,
+				message_ts: debriefTs,
 			})
-			console.log(getPermalinkResponse)
 			await app.client.chat.postMessage({
 				token: token,
 				channel: channel,
