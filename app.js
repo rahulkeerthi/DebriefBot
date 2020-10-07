@@ -20,8 +20,6 @@ async function fetchMessage(channel) {
 			limit: 100,
 		})
 
-		console.log(`fetch result: ${result.messages}`)
-
 		// filters messages sent by DebriefBot
 		let messages = result.messages.filter(message => {
 			if (message.bot_profile) {
@@ -70,8 +68,8 @@ app.command("/debrief", async ({ ack, body, client }) => {
 	messageInitial = await fetchMessage(body.channel_id)
 	if (body.text.trim() == "update" && messageInitial.ts < (Date.now() - 18 * 60 * 60 * 1000) / 1000) {
 		await ack(`No recent (last 18h) debrief available. Please start a new one with "/debrief`)
-		// debriefTs = messageInitial.ts
-		// isUpdate = false
+		debriefTs = messageInitial.ts
+		isUpdate = false
 		messageInitial = null
 	} else if (body.text.trim() == "update") {
 		await ack(`You're updating the debrief`)
