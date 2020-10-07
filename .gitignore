@@ -1,7 +1,7 @@
 # gitignore
-debriefStore.js
-fetchMessage.js
-mongoCrud.js
+/debriefStore.js
+/fetchMessage.js
+/mongoCrud.js
 
 .vscode/
 node_modules/
