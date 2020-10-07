@@ -265,6 +265,7 @@ app.command("/debrief", async ({ ack, body, client }) => {
 
 app.view("debriefModal", async ({ ack, view, context }) => {
 	await ack()
+	const token = context.botToken
 	const values = view.state.values
 	const { channel, debriefTs, isUpdate, user } = JSON.parse(view.private_metadata)
 	let generalFeeling = values.generalFeeling.generalFeelingInput.value || "No input provided yet"
@@ -280,7 +281,7 @@ app.view("debriefModal", async ({ ack, view, context }) => {
 		studentsList = "No students tagged yet"
 	}
 	let options = { hour12: true }
-	let responseToUser = [
+	let responseToUser = JSON.stringify([
 		{
 			type: "section",
 			text: {
@@ -385,13 +386,12 @@ app.view("debriefModal", async ({ ack, view, context }) => {
 				text: "*That's it! Have a lovely day! DebriefBot over and out!* :drop_the_mic:",
 			},
 		},
-	]
-	responseToUser = JSON.stringify(responseToUser)
+	])
 
 	if (isUpdate && debriefTs < (Date.now() - 18 * 60 * 60 * 1000) / 1000) {
 		try {
 			await app.client.chat.postEphemeral({
-				token: process.env.SLACK_BOT_TOKEN,
+				token: token,
 				channel: channel,
 				user: user,
 				text: `Last debrief is older than 18 hours. Please start a new one with /debrief`,
@@ -401,38 +401,42 @@ app.view("debriefModal", async ({ ack, view, context }) => {
 		}
 	} else if (isUpdate) {
 		try {
-			await app.client.chat.update({
-				token: context.botToken,
+			const updateResponse = await app.client.chat.update({
+				token: token,
 				channel: channel,
 				blocks: responseToUser,
 				ts: debriefTs,
+				as_user: true,
 			})
-			const getPermalink = await app.client.chat.getPermalink({
-				token: context.botToken,
+			const updatedTs = updateResponse.ts
+			const getPermalinkResponse = await app.client.chat.getPermalink({
+				token: token,
 				channel: channel,
-				ts: debriefTs,
+				ts: updatedTs,
 			})
+			console.log(getPermalinkResponse)
 			await app.client.chat.postMessage({
-				token: process.env.SLACK_BOT_TOKEN,
+				token: token,
 				channel: channel,
-				text: `Today's debrief has been updated! You can see it <${getPermalink.permalink}|*here*>`,
+				text: `Today's debrief has been updated! You can see it <${getPermalinkResponse.permalink}|*here*>`,
 			})
 		} catch (error) {
 			console.error(error)
 		}
 	} else {
 		try {
-			await app.client.chat.postMessage({
-				token: context.botToken,
-				channel: channel,
-				blocks: responseToUser,
-				text: "",
-			})
 			await app.client.chat.postEphemeral({
-				token: process.env.SLACK_BOT_TOKEN,
+				token: token,
 				channel: channel,
 				user: user,
 				text: `Today's debrief is on its way! :star-struck:`,
+			})
+			await app.client.chat.postMessage({
+				token: token,
+				channel: channel,
+				blocks: responseToUser,
+				text: "",
+				link_name: true,
 			})
 		} catch (error) {
 			console.error(error)
