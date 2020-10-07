@@ -8,8 +8,10 @@ const app = new App({
 	logLevel: LogLevel.DEBUG,
 })
 
-async function fetchMessage(channel, user) {
+// fetches the last debrief from the current channel
+async function fetchMessage(channel) {
 	try {
+		// fetch last 100 messages from channel
 		const result = await app.client.conversations.history({
 			token: process.env.SLACK_BOT_TOKEN,
 			channel: channel,
@@ -18,11 +20,14 @@ async function fetchMessage(channel, user) {
 			limit: 100,
 		})
 
+		// filters messages sent by DebriefBot
 		let messages = result.messages.filter(message => {
 			if (message.bot_profile) {
-				return message.bot_profile.name == "DebriefBot"
+				return message.bot_profile.name == "DebriefBot" && message.text.includes(/summary of today's debrief/g)
 			}
 		})
+
+		// if messages are found, construct the msg object
 		if (messages.length > 0) {
 			let message = messages[0].blocks
 			msg = {
@@ -35,9 +40,12 @@ async function fetchMessage(channel, user) {
 				ts: messages[0].ts,
 			}
 
+			// capture user mentions formatted as bullet points
 			if (msg.studentsByIdInitial != "No students tagged yet") {
 				msg.studentsByIdInitial = msg.studentsByIdInitial.match(/[0-9A-Z]+/g)
 			}
+
+			// replace default no-input strings with blanks
 			Object.keys(msg).forEach(key => {
 				if (msg[key] == "No students tagged yet") {
 					msg[key] = ""
