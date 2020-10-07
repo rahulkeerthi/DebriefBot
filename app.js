@@ -57,20 +57,26 @@ async function fetchMessage(channel) {
 				}
 			})
 			return msg
+		} else {
+			return null
 		}
 	} catch (error) {
 		console.error(error)
 	}
 }
 
+// listens for and responds to /debrief slash command
 app.command("/debrief", async ({ ack, body, client }) => {
 	let messageInitial, debriefTs, isUpdate
+	// fetch any previous debrief if available
 	messageInitial = await fetchMessage(body.channel_id)
-	if (body.text.trim() == "update" && messageInitial.ts < (Date.now() - 18 * 60 * 60 * 1000) / 1000) {
+
+	// decide what to do based on slash command instructions and timestamp of debrief
+	if (body.text.trim() == "update" && messageInitial && messageInitial.ts < (Date.now() - 18 * 60 * 60 * 1000) / 1000) {
 		await ack(`No recent (last 18h) debrief available. Please start a new one with "/debrief`)
-		debriefTs = messageInitial.ts
+		// debriefTs = messageInitial.ts
 		isUpdate = false
-		messageInitial = null
+		// messageInitial = null
 	} else if (body.text.trim() == "update") {
 		await ack(`You're updating the debrief`)
 		debriefTs = messageInitial.ts
@@ -79,7 +85,8 @@ app.command("/debrief", async ({ ack, body, client }) => {
 		// messageInitial = (await fetchMessage(body.channel_id, body.user_id)) || null
 		// if (messageInitial && messageInitial.ts > (Date.now() - 12 * 60 * 60 * 1000) / 1000) {
 		await ack(`There's already a debrief for today, use "/debrief update" instead`)
-		messageInitial = null
+		isUpdate = false
+		// messageInitial = null
 	} else {
 		await ack(`You're starting today's debrief`)
 		messageInitial = { generalFeelingInitial: "", lectureInitial: "", challengesInitial: "", studentsInitial: "", studentsByIdInitial: "", takeawaysInitial: "" }
