@@ -505,10 +505,14 @@ app.event("app_home_opened", async ({ event, client }) => {
 	}
 })
 
-app.action("batch_selection", async ({ ack, payload, client }) => {
+app.action("batch_selection", async ({ ack, action, payload, state, client }) => {
 	await ack()
 	console.log("PAYLOAD")
 	console.log(payload)
+	console.log("ACTION")
+	console.log(action)
+	console.log("STATE")
+	console.log(state)
 	app_home_basic_block = JSON.stringify({
 		type: "home",
 		blocks: [
@@ -536,9 +540,13 @@ app.action("batch_selection", async ({ ack, payload, client }) => {
 					},
 					action_id: "batch_selection",
 				},
+			},
+			{
+				type: "header",
 				text: {
-					type: "mrkdwn",
+					type: "plain_text",
 					text: `You've chosen <#${payload.selected_conversations[0]}>!`,
+					emoji: true,
 				},
 			},
 		],
@@ -547,11 +555,9 @@ app.action("batch_selection", async ({ ack, payload, client }) => {
 	})
 
 	try {
-		console.log("METADATA")
-		console.log(payload.private_metadata)
 		const result = await client.views.publish({
 			token: slackBotToken,
-			user: payload.private_metadata,
+			user: payload.private_metadata || state.private_metadata || action.private_metadata,
 			view: app_home_basic_block,
 		})
 		console.log("RESULT")
