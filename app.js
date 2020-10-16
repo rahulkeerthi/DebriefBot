@@ -495,7 +495,7 @@ app.event("app_home_opened", async ({ event, client }) => {
 		const result = await client.views.publish({
 			user_id: event.user,
 			view: app_home_basic_block,
-			token: token,
+			token: slackBotToken,
 		})
 		console.log(result)
 	} catch (error) {
