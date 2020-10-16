@@ -458,6 +458,50 @@ app.view("debriefModal", async ({ ack, view }) => {
 		}
 	}
 })
+
+let app_home_basic_block = {
+	type: "home",
+	blocks: [
+		{
+			type: "header",
+			text: {
+				type: "plain_text",
+				text: "This is a header block",
+				emoji: true,
+			},
+		},
+		{
+			type: "section",
+			blocks_id: "batch_select",
+			text: {
+				type: "mrkdwn",
+				text: "Select batch(es) you'd like to see debriefs from",
+			},
+			accessory: {
+				type: "multi_conversations_select",
+				placeholder: {
+					type: "plain_text",
+					text: "Select conversations",
+					emoji: true,
+				},
+				action_id: "batch_selection",
+			},
+		},
+	],
+}
+
+app.event("app_home_opened", async ({ event, client }) => {
+	try {
+		const result = await client.views.publish({
+			user_id: event.user,
+			view: app_home_basic_block,
+			token: token,
+		})
+		console.log(result)
+	} catch (error) {
+		console.error(error)
+	}
+})
 ;(async () => {
 	await app.start(process.env.PORT || 4390)
 	console.log("⚡️ Bolt app is running!")
