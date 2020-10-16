@@ -459,7 +459,7 @@ app.view("debriefModal", async ({ ack, view }) => {
 	}
 })
 
-let app_home_basic_block = {
+let app_home_basic_block = JSON.stringify({
 	type: "home",
 	blocks: [
 		{
@@ -488,7 +488,7 @@ let app_home_basic_block = {
 			},
 		},
 	],
-}
+})
 
 app.event("app_home_opened", async ({ event, client }) => {
 	try {
