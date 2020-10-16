@@ -505,16 +505,12 @@ app.event("app_home_opened", async ({ event, client }) => {
 	}
 })
 
-app.action("batch_selection", async ({ ack, payload, user, body, client }) => {
+app.action("batch_selection", async ({ ack, payload, body, client }) => {
 	await ack()
 	console.log("PAYLOAD")
 	console.log(payload)
-	console.log("USER")
-	console.log(user)
 	console.log("BODY")
 	console.log(body)
-	console.log("CLIENT")
-	console.log(client)
 	app_home_basic_block = JSON.stringify({
 		type: "home",
 		blocks: [
@@ -558,7 +554,7 @@ app.action("batch_selection", async ({ ack, payload, user, body, client }) => {
 	try {
 		const result = await client.views.publish({
 			token: slackBotToken,
-			user: user.id,
+			user: body.user.id,
 			view: app_home_basic_block,
 		})
 		console.log("RESULT")
