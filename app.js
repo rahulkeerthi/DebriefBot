@@ -472,7 +472,7 @@ let app_home_basic_block = JSON.stringify({
 		},
 		{
 			type: "section",
-			blocks_id: "batch_select",
+			block_id: "batch_select",
 			text: {
 				type: "mrkdwn",
 				text: "Select batch(es) you'd like to see debriefs from",
