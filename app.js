@@ -554,7 +554,7 @@ app.action("batch_selection", async ({ ack, payload, body, client }) => {
 	try {
 		const result = await client.views.publish({
 			token: slackBotToken,
-			user: body.user.id,
+			user_id: body.user.id,
 			view: app_home_basic_block,
 		})
 		console.log("RESULT")
