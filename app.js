@@ -459,55 +459,56 @@ app.view("debriefModal", async ({ ack, view }) => {
 	}
 })
 
-let app_home_basic_block = JSON.stringify({
-	type: "home",
-	blocks: [
-		{
-			type: "header",
-			text: {
-				type: "plain_text",
-				text: "Welcome to DebriefBot! Here, you can explore the debriefs of any batch you are a part of. Just enter a batch number below!",
-				emoji: true,
-			},
-		},
-		{
-			type: "section",
-			block_id: "batch_select",
-			text: {
-				type: "mrkdwn",
-				text: "Select batch(es) you'd like to see debriefs from",
-			},
-			accessory: {
-				type: "multi_conversations_select",
-				placeholder: {
-					type: "plain_text",
-					text: "Select conversations",
-					emoji: true,
-				},
-				action_id: "batch_selection",
-			},
-		},
-	],
-	callback_id: "home",
-})
+let app_home_basic_block = {}
 
 app.event("app_home_opened", async ({ event, client }) => {
+	app_home_basic_block = JSON.stringify({
+		type: "home",
+		blocks: [
+			{
+				type: "header",
+				text: {
+					type: "plain_text",
+					text: "Welcome to DebriefBot! Here, you can explore the debriefs of any batch you are a part of. Just enter a batch number below!",
+					emoji: true,
+				},
+			},
+			{
+				type: "section",
+				block_id: "batch_select",
+				text: {
+					type: "mrkdwn",
+					text: "Select batch(es) you'd like to see debriefs from",
+				},
+				accessory: {
+					type: "multi_conversations_select",
+					placeholder: {
+						type: "plain_text",
+						text: "Select conversations",
+						emoji: true,
+					},
+					action_id: "batch_selection",
+				},
+			},
+		],
+		callback_id: "home",
+		private_metadata: event.user_id,
+	})
 	try {
 		await client.views.publish({
 			user_id: event.user,
 			view: app_home_basic_block,
 			token: slackBotToken,
-			private_metadata: event.user,
 		})
 	} catch (error) {
 		console.error(error)
 	}
 })
 
-app.action("batch_selection", async ({ ack, event, payload, client }) => {
+app.action("batch_selection", async ({ ack, payload, client }) => {
 	await ack()
-	console.log("EVENT")
-	console.log(event)
+	console.log("PAYLOAD")
+	console.log(payload)
 	app_home_basic_block = JSON.stringify({
 		type: "home",
 		blocks: [
@@ -542,6 +543,7 @@ app.action("batch_selection", async ({ ack, event, payload, client }) => {
 			},
 		],
 		callback_id: "home",
+		private_metadata: payload.private_metadata,
 	})
 
 	try {
