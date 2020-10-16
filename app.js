@@ -515,7 +515,13 @@ app.action("batch_selection", async ({ ack, payload, body, client }) => {
 			types: "private_channel",
 			user: body.user.id,
 		})
+		console.log("RESULT")
+		console.log(result)
+		console.log("TARGET CONVO")
+		console.log(payload.selected_conversations[0])
+		console.log("TEST CONVOS")
 		const channel = result.channels.filter(channel => {
+			console.log(channel.id)
 			channel.id == payload.selected_conversations[0]
 		})
 		channelName = channel.name
