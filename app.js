@@ -466,7 +466,7 @@ let app_home_basic_block = JSON.stringify({
 			type: "header",
 			text: {
 				type: "plain_text",
-				text: "This is a header block",
+				text: "Welcome to DebriefBot! Here, you can explore the debriefs of any batch you are a part of. Just enter a batch number below!",
 				emoji: true,
 			},
 		},
@@ -488,6 +488,7 @@ let app_home_basic_block = JSON.stringify({
 			},
 		},
 	],
+	callback_id: "home",
 })
 
 app.event("app_home_opened", async ({ event, client }) => {
@@ -498,6 +499,18 @@ app.event("app_home_opened", async ({ event, client }) => {
 			token: slackBotToken,
 		})
 		console.log(result)
+	} catch (error) {
+		console.error(error)
+	}
+})
+
+app.action("batch_selection", async ({ ack, view, payload, client }) => {
+	await ack()
+	try {
+		console.log("VIEW")
+		console.log(view)
+		console.log("PAYLOAD")
+		console.log(payload)
 	} catch (error) {
 		console.error(error)
 	}
