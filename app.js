@@ -507,10 +507,21 @@ app.event("app_home_opened", async ({ event, client }) => {
 
 app.action("batch_selection", async ({ ack, payload, body, client }) => {
 	await ack()
-	console.log("PAYLOAD")
-	console.log(payload)
-	console.log("BODY")
-	console.log(body)
+	let channelName
+	try {
+		const result = await client.users.conversations({
+			token: slackBotToken,
+			exclude_archived: true,
+			types: "private_channel",
+			user: body.user.id,
+		})
+		const channel = result.channels.filter(channel => {
+			channel.id == payload.selected_conversations[0]
+		})
+		channelName = channel.name
+	} catch (error) {
+		console.error(error)
+	}
 	app_home_basic_block = JSON.stringify({
 		type: "home",
 		blocks: [
@@ -543,7 +554,7 @@ app.action("batch_selection", async ({ ack, payload, body, client }) => {
 				type: "header",
 				text: {
 					type: "plain_text",
-					text: `You've chosen <#${payload.selected_conversations[0]}>!`,
+					text: `You've chosen #${channelName}!`,
 					emoji: true,
 				},
 			},
@@ -557,8 +568,6 @@ app.action("batch_selection", async ({ ack, payload, body, client }) => {
 			user_id: body.user.id,
 			view: app_home_basic_block,
 		})
-		console.log("RESULT")
-		console.log(result)
 	} catch (error) {
 		console.error(error)
 	}
