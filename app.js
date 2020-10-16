@@ -493,24 +493,67 @@ let app_home_basic_block = JSON.stringify({
 
 app.event("app_home_opened", async ({ event, client }) => {
 	try {
-		const result = await client.views.publish({
+		await client.views.publish({
 			user_id: event.user,
 			view: app_home_basic_block,
 			token: slackBotToken,
+			private_metadata: event.user,
 		})
-		console.log(result)
 	} catch (error) {
 		console.error(error)
 	}
 })
 
-app.action("batch_selection", async ({ ack, view, payload, client }) => {
+app.action("batch_selection", async ({ ack, event, payload, client }) => {
 	await ack()
+	console.log("EVENT")
+	console.log(event)
+	app_home_basic_block = JSON.stringify({
+		type: "home",
+		blocks: [
+			{
+				type: "header",
+				text: {
+					type: "plain_text",
+					text: "Welcome to DebriefBot! Here, you can explore the debriefs of any batch you are a part of. Just select a batch number below!",
+					emoji: true,
+				},
+			},
+			{
+				type: "section",
+				block_id: "batch_select",
+				text: {
+					type: "mrkdwn",
+					text: "Please select the corresponding teacher batch, not the student one!",
+				},
+				accessory: {
+					type: "multi_conversations_select",
+					placeholder: {
+						type: "plain_text",
+						text: "Select conversations",
+						emoji: true,
+					},
+					action_id: "batch_selection",
+				},
+				text: {
+					type: "mrkdwn",
+					text: `You've chosen <#${payload.selected_conversations[0]}>!`,
+				},
+			},
+		],
+		callback_id: "home",
+	})
+
 	try {
-		console.log("VIEW")
-		console.log(view)
-		console.log("PAYLOAD")
-		console.log(payload)
+		console.log("METADATA")
+		console.log(payload.private_metadata)
+		const result = await client.views.publish({
+			token: slackBotToken,
+			user: payload.private_metadata,
+			view: app_home_basic_block,
+		})
+		console.log("RESULT")
+		console.log(result)
 	} catch (error) {
 		console.error(error)
 	}
