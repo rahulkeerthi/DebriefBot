@@ -507,7 +507,11 @@ app.event("app_home_opened", async ({ event, client }) => {
 
 app.action("batch_selection", async ({ ack, payload, body, client }) => {
 	await ack()
-	let channelName
+	let selectedResponse
+	let debriefBlocks = {}
+	let lastFiveDebriefs = []
+	let count = 0
+
 	try {
 		const result = await client.users.conversations({
 			token: slackBotToken,
@@ -515,61 +519,126 @@ app.action("batch_selection", async ({ ack, payload, body, client }) => {
 			types: "private_channel",
 			user: body.user.id,
 		})
-		console.log("RESULT")
-		console.log(result)
-		console.log("TARGET CONVO")
-		console.log(payload.selected_conversations[0])
-		console.log("TEST CONVOS")
 		const channel = result.channels.filter(channel => {
-			console.log(channel.id)
-			channel.id == payload.selected_conversations[0]
+			return channel.id === payload.selected_conversations[0]
 		})
-		channelName = channel.name
+		if (channel.length === 0) {
+			selectedResponse = "That's a public channel, make sure you've selected the teachers channel!"
+		} else {
+			selectedResponse = `You've selected #${channel[0].name}!`
+			let result
+			while (lastFiveDebriefs.length < 5 && count < 5) {
+				result = await app.client.conversations.history({
+					token: slackBotToken,
+					channel: channel[0].id,
+					inclusive: true,
+					limit: 100,
+					cursor: count === 0 ? null : result.response_metadata.next_cursor,
+				})
+				let messages = result.messages.filter(message => {
+					if (message.bot_profile && message.blocks) {
+						return message.bot_profile.name == "DebriefBot"
+					}
+				})
+				lastFiveDebriefs = [...lastFiveDebriefs, ...messages]
+			}
+			count++
+		}
+		if (count === 5 && lastFiveDebriefs.length < 5) {
+			selectedResponse += ` Unfortunately, we could only find the following ${lastFiveDebriefs.length} debriefs!`
+		}
+		if (lastFiveDebriefs.length > 0) {
+			debriefBlocks = lastFiveDebriefs.map(debrief => debrief.blocks).flat()
+		}
+		console.log(debriefBlocks)
 	} catch (error) {
 		console.error(error)
 	}
-	app_home_basic_block = JSON.stringify({
-		type: "home",
-		blocks: [
-			{
-				type: "header",
-				text: {
-					type: "plain_text",
-					text: "Welcome to DebriefBot! Here, you can explore the debriefs of any batch you are a part of. Just select a batch number below!",
-					emoji: true,
-				},
-			},
-			{
-				type: "section",
-				block_id: "batch_select",
-				text: {
-					type: "mrkdwn",
-					text: "Please select the corresponding teacher batch, not the student one!",
-				},
-				accessory: {
-					type: "multi_conversations_select",
-					placeholder: {
+	if (lastFiveDebriefs.length > 0) {
+		app_home_basic_block = JSON.stringify({
+			type: "home",
+			blocks: [
+				{
+					type: "header",
+					text: {
 						type: "plain_text",
-						text: "Select conversations",
+						text: "Welcome to DebriefBot! Here, you can explore the debriefs of any batch you are a part of. Just select a batch number below!",
 						emoji: true,
 					},
-					action_id: "batch_selection",
 				},
-			},
-			{
-				type: "header",
-				text: {
-					type: "plain_text",
-					text: `You've chosen #${channelName}!`,
-					emoji: true,
+				{
+					type: "section",
+					block_id: "batch_select",
+					text: {
+						type: "mrkdwn",
+						text: "Please select the corresponding teacher batch, not the student one!",
+					},
+					accessory: {
+						type: "multi_conversations_select",
+						placeholder: {
+							type: "plain_text",
+							text: "Select conversations",
+							emoji: true,
+						},
+						action_id: "batch_selection",
+					},
 				},
-			},
-		],
-		callback_id: "home",
-	})
+				{
+					type: "header",
+					text: {
+						type: "plain_text",
+						text: selectedResponse,
+						emoji: true,
+					},
+				},
+				debriefBlocks,
+			],
+			callback_id: "home",
+		})
+	} else {
+		app_home_basic_block = JSON.stringify({
+			type: "home",
+			blocks: [
+				{
+					type: "header",
+					text: {
+						type: "plain_text",
+						text: "Welcome to DebriefBot! Here, you can explore the debriefs of any batch you are a part of. Just select a batch number below!",
+						emoji: true,
+					},
+				},
+				{
+					type: "section",
+					block_id: "batch_select",
+					text: {
+						type: "mrkdwn",
+						text: "Please select the corresponding teacher batch, not the student one!",
+					},
+					accessory: {
+						type: "multi_conversations_select",
+						placeholder: {
+							type: "plain_text",
+							text: "Select conversations",
+							emoji: true,
+						},
+						action_id: "batch_selection",
+					},
+				},
+				{
+					type: "header",
+					text: {
+						type: "plain_text",
+						text: "No results found!",
+						emoji: true,
+					},
+				},
+			],
+			callback_id: "home",
+		})
+	}
 
 	try {
-		const result = await client.views.publish({
+		await client.views.publish({
 			token: slackBotToken,
 			user_id: body.user.id,
 			view: app_home_basic_block,
