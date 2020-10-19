@@ -39,6 +39,7 @@ async function fetchMessage(channel) {
 				studentsInitial: message[10].text.text,
 				studentsByIdInitial: message[11].text.text,
 				takeawaysInitial: message[13].text.text,
+				nextTeacherInitial: message[15].text.text,
 				ts: messages[0].ts,
 			}
 
@@ -46,7 +47,11 @@ async function fetchMessage(channel) {
 			if (msg.studentsByIdInitial != "No students tagged yet") {
 				msg.studentsByIdInitial = msg.studentsByIdInitial.match(/[0-9A-Z]+/g)
 			}
-
+			if (msg.nextTeacherInitial.match(/[0-9A-Z]{4,}/g)) {
+				msg.nextTeacherInitial = msg.nextTeacherInitial.match(/[0-9A-Z]{4,}/g)[0]
+			} else {
+				msg.nextTeacherInitial = "None"
+			}
 			// replace default no-input strings with blanks
 			Object.keys(msg).forEach(key => {
 				if (msg[key] == "No students tagged yet") {
@@ -72,7 +77,6 @@ app.command("/debrief", async ({ ack, body, client }) => {
 	let isUpdate = false
 	// fetch any previous debrief if available
 	let messageInitial = await fetchMessage(body.channel_id)
-
 	// decide what to do based on slash command instructions and timestamp of debrief
 	if (body.text.trim() == "update" && messageInitial && messageInitial.ts < (Date.now() - 18 * 60 * 60 * 1000) / 1000) {
 		await ack(`No recent (last 18h) debrief available. Please start a new one with "/debrief`)
@@ -244,6 +248,24 @@ app.command("/debrief", async ({ ack, body, client }) => {
 						emoji: true,
 					},
 				},
+				{
+					type: "section",
+					block_id: "nextTeacher",
+					text: {
+						type: "mrkdwn",
+						text: "*Select next lead teacher:* :male-teacher: :female-teacher:",
+					},
+					accessory: {
+						type: "users_select",
+						initial_user: messageInitial.nextTeacherInitial,
+						placeholder: {
+							type: "plain_text",
+							text: "Select a user",
+							emoji: true,
+						},
+						action_id: "teacher_select",
+					},
+				},
 			]
 
 			await client.views.open({
@@ -277,6 +299,10 @@ app.command("/debrief", async ({ ack, body, client }) => {
 	}
 })
 
+app.action("teacher_select", async ({ ack, view }) => {
+	await ack()
+})
+
 app.view("debriefModal", async ({ ack, view }) => {
 	await ack()
 	const values = view.state.values
@@ -288,12 +314,19 @@ app.view("debriefModal", async ({ ack, view }) => {
 	let students = values.students.studentsInput.value || "No input provided yet"
 	let takeaways = values.takeaways.takeawaysInput.value || "No input provided yet"
 	let studentsById = values.studentsById.studentsByIdInput.selected_users || []
+	let nextTeacherId = values.nextTeacher.teacher_select.selected_user
+	let nextTeacher
 	let studentsList = ""
 	if (studentsById.length > 0) {
 		// construct unordered list of students using user mention formatting
 		studentsList = studentsById.map(studentId => `• <@${studentId}>\n`).join("")
 	} else {
 		studentsList = "No students tagged yet"
+	}
+	if (nextTeacherId && nextTeacherId != "None") {
+		nextTeacher = `:check: The next session's lead teacher, <@${nextTeacherId}>, has been informed!`
+	} else {
+		nextTeacher = ":grey_exclamation: Notify the next session's lead teacher by using '/debrief update' and selecting them."
 	}
 	// construct stringified blocks to post as debrief message
 	let responseToUser = JSON.stringify([
@@ -398,7 +431,128 @@ app.view("debriefModal", async ({ ack, view }) => {
 			type: "section",
 			text: {
 				type: "mrkdwn",
+				text: nextTeacher,
+			},
+		},
+		{
+			type: "section",
+			text: {
+				type: "mrkdwn",
 				text: "*That's it! Have a lovely day! DebriefBot over and out!* :drop_the_mic:",
+			},
+		},
+	])
+
+	let responseToTeacher = JSON.stringify([
+		{
+			type: "section",
+			text: {
+				type: "mrkdwn",
+				text: "*Hiya :wave:, DebriefBot here, looks like there's a debrief for you. Check it out!*",
+			},
+		},
+		{
+			type: "section",
+			text: {
+				type: "mrkdwn",
+				text: `Here's a summary of today's debrief (last updated: <!date^${Math.round(new Date() / 1000)}^{date_short_pretty} {time}|${new Date().toLocaleString("en-GB", { hour12: true })} UTC> by <@${user}>):`,
+			},
+		},
+		{
+			type: "divider",
+		},
+		{
+			type: "section",
+			text: {
+				type: "mrkdwn",
+				text: "*General Feeling About the Batch* :rocket:",
+			},
+		},
+		{
+			type: "section",
+			text: {
+				type: "mrkdwn",
+				text: generalFeeling,
+			},
+		},
+		{
+			type: "section",
+			text: {
+				type: "mrkdwn",
+				text: "*Lectures and Livecode* :microphone: :livecode:",
+			},
+		},
+		{
+			type: "section",
+			text: {
+				type: "mrkdwn",
+				text: lecture,
+			},
+		},
+		{
+			type: "section",
+			text: {
+				type: "mrkdwn",
+				text: "*Challenges and Tickets* :thinking:",
+			},
+		},
+		{
+			type: "section",
+			text: {
+				type: "mrkdwn",
+				text: challenges,
+			},
+		},
+		{
+			type: "section",
+			text: {
+				type: "mrkdwn",
+				text: "*Students* :male-student: :female-student:",
+			},
+		},
+		{
+			type: "section",
+			text: {
+				type: "mrkdwn",
+				text: students,
+			},
+		},
+		{
+			type: "section",
+			text: {
+				type: "mrkdwn",
+				text: studentsList,
+			},
+		},
+		{
+			type: "section",
+			text: {
+				type: "mrkdwn",
+				text: "*General takeaways* :takeout_box:",
+			},
+		},
+		{
+			type: "section",
+			text: {
+				type: "mrkdwn",
+				text: takeaways,
+			},
+		},
+		{
+			type: "divider",
+		},
+		{
+			type: "section",
+			text: {
+				type: "mrkdwn",
+				text: "*Phew, that's it. See you soon, you're going to be great!* :drop_the_mic:",
+			},
+		},
+		{
+			type: "section",
+			text: {
+				type: "mrkdwn",
+				text: "p.s. in case you didn't already know, let your team know they can start a debrief with me at the end of the day in the batch teachers' channel with '/debrief'",
 			},
 		},
 	])
@@ -434,7 +588,17 @@ app.view("debriefModal", async ({ ack, view }) => {
 				token: slackBotToken,
 				channel: channel,
 				text: `Today's debrief has been updated! You can see it <${getPermalinkResponse.permalink}|*here*>`,
+				link_names: true,
 			})
+			if (nextTeacherId && nextTeacherId != "None") {
+				await app.client.chat.postMessage({
+					token: slackBotToken,
+					channel: nextTeacherId,
+					type: "mrkdwn",
+					text: `Hiya, DebriefBot here again, today's debrief was updated! You can see it <${getPermalinkResponse.permalink}|*here*>`,
+					unfurl_links: false,
+				})
+			}
 		} catch (error) {
 			console.error(error)
 		}
@@ -446,13 +610,33 @@ app.view("debriefModal", async ({ ack, view }) => {
 				user: user,
 				text: `Today's debrief is on its way! :star-struck:`,
 			})
-			await app.client.chat.postMessage({
+			const channelMessage = await app.client.chat.postMessage({
 				token: slackBotToken,
 				channel: channel,
 				blocks: responseToUser,
 				text: "",
-				link_name: true,
+				link_names: true,
 			})
+			if (nextTeacherId && nextTeacherId != "None") {
+				const getPermalinkResponse = await app.client.chat.getPermalink({
+					token: slackBotToken,
+					channel: channel,
+					message_ts: channelMessage.ts,
+				})
+				await app.client.chat.postMessage({
+					token: slackBotToken,
+					channel: nextTeacherId,
+					blocks: responseToTeacher,
+					text: "",
+					link_names: true,
+				})
+				await app.client.chat.postMessage({
+					token: slackBotToken,
+					channel: nextTeacherId,
+					text: `If you like, you can see the debrief <${getPermalinkResponse.permalink}|*here*>`,
+					unfurl_links: false,
+				})
+			}
 		} catch (error) {
 			console.error(error)
 		}
