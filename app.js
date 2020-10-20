@@ -39,7 +39,7 @@ async function fetchMessage(channel) {
 				studentsInitial: message[10].text.text,
 				studentsByIdInitial: message[11].text.text,
 				takeawaysInitial: message[13].text.text,
-				nextTeacherInitial: message[15].text.text,
+				nextTeacherInitial: message[15].text.text || "None",
 				ts: messages[0].ts,
 			}
 
