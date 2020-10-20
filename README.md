@@ -2,7 +2,7 @@
 
 DebriefBot is a friendly helper for teaching teams, simplifying the daily end-of-day TA debriefs. By getting rid of needless copy-pasting and focusing data capture for note-takers, TAs can effectively debrief while Teachers can easily update the day's debrief with additional input later on.
 
-[Demo Video (v1.0.0)](https://res.cloudinary.com/rahaluha/video/upload/v1601648452/DebriefBot_v1_vaz3sg.mp4)
+[Demo Video (v1.1.0)](https://res.cloudinary.com/rahaluha/video/upload/v1603217525/v1.1.0_fussow.mp4)
 
 # How does it work?
 
@@ -33,7 +33,7 @@ Any issues using the commands above are fed back to the user using ephemeral mes
 - **"Not sure about that. Did you mean to use "/debrief update"?"**: You've made a typo when writing `update` (or have just typed gibberish after `/debrief` to see what it would do). Try again but make your friends proud this time.
 - **"To start a new debrief, use "/debrief" or to update today's debrief use "/debrief update""**: The catch-all error message. You probably shouldn't ever see this message but you never know.
 
-If you're fairly sure you shouldn't be seeing these error or a particular error, let me know at `@Rahul` on Slack or at [rahulkeerthi2@gmail.com](mailto:rahulkeerthi2@gmail.com). 
+If you're fairly sure you shouldn't be seeing these error or a particular error, let me know — `@Rahul` on Slack.
 
 # Bot Default Settings
 
@@ -42,7 +42,7 @@ Some default settings are hardcoded into DebriefBot, specifically around timings
 ### Timings
 
 - **New Debriefs**: When trying to create a new debrief, the bot checks if one has been created in the **last 12 hours**. If there has been one, it responds with `There's already a debrief for today, use "/debrief update" instead`
-- **Updating Debriefs**: When trying to update a debrief, the bot checks the conversation history in the **last 24 hours** to find the last debrief. If it cannot find one, it responds with `No recent (last 24h) debrief available. Please start a new one with "/debrief"`
+- **Updating Debriefs**: When trying to update a debrief, the bot checks the conversation history in the **last 18 hours** to find the last debrief. If it cannot find one, it responds with `No recent (last 18h) debrief available. Please start a new one with "/debrief"`
 - **Edge Cases:**
     - **Left Modal Open**: If the user started a debrief update but didn't submit it, if **more than 18 hours** has passed since the original debrief was posted, it responds with `Last Debrief is older than 18 hours. Please start a new one with /debrief` instead of allowing the update
 
@@ -54,21 +54,34 @@ Accounting for these limits (particularly response size) and providing flexibili
 
 # Development Roadmap
 
-## Core Functionality
+## Permissions and Lookups
 
 - [ ]  Ensure DebriefBot can only be invited to (or at least, only be used in) private channels (i.e. teacher channels)
 - [ ]  Better way to validate debrief "newness" than comparing message timestamp to arbitrary number of hours before "now"
 - [ ]  Allow conversation history lookback or conversation list call to account for conversations with more than 100 messages between debriefs, or users who are in more than 100 unarchived public channels. Alternatively, implement an active_batch_channel and/or batch_debrief_messages data store for this lookup that is regularly run in the background (need to check infosec and GDPR issues).
 
-## User Experience / Flow
+## Notifications
+
+- [x]  Add ephemeral messaging for errors, feedback and suggestions
+- [ ]  Implement "next teacher" selection in modal and resulting DebriefBot IM  notifications to that teacher, with link to latest debrief (and any updates). This is to keep the next session's teacher updated about the debrief
+
+## User Experience / Debrief Flow
 
 - [x]  Provide permalink to existing debrief in ephemeral message when trying to create a new debrief within 12h of the previous one
 - [x]  Make sure timestamp on debrief is in batch/channel timezone (use Slack [native time](https://api.slack.com/reference/surfaces/formatting#date-formatting))
+- [ ]  Ability to converse with DebriefBot (it responds via DMs) to get more information on how to use it and what the slash commands do (or even to share some tips or best practice)
+
+## App Home / Admin
+
+- [x]  Interface that allows teaching staff to see the last 5 debriefs from a specific batch (via selection of teachers' channel)
+- [ ]  Reformat debriefs to be more readable as a summary (TODO: identify best way to use existing information)
+
+## Not Currently Feasible / On Hold
+
 - [ ]  "Live" display of user mentions and emojis in modal input boxes (only plain_text option available, which doesn't trigger a user/emoji lookup)
-- [ ]  Ability to converse with DebriefBot (it responds via DMs) to get more information on how to use it and what the slash commands do
 
-## Admin
+## Uncategorised / Ideas
 
-- [ ]  Home app or specific slash command for batch owners to review debriefs from the past week for a particular channel (or channels)
+- [ ]  Slash command for batch owners to review debriefs from the past week for a particular channel (or channels) - only feasible if batch owners can be automatically identified or set by admin somehow
 
 Please raise an [Issue](https://github.com/rahulkeerthi/DebriefBot/issues) if you have suggestions or issues.
