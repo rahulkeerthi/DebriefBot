@@ -643,41 +643,40 @@ app.view("debriefModal", async ({ ack, view }) => {
 	}
 })
 
-let app_home_basic_block = {}
-
-app.event("app_home_opened", async ({ event, client }) => {
-	app_home_basic_block = JSON.stringify({
-		type: "home",
-		blocks: [
-			{
-				type: "header",
-				text: {
+let app_home_basic_block = JSON.stringify({
+	type: "home",
+	blocks: [
+		{
+			type: "header",
+			text: {
+				type: "plain_text",
+				text: "Welcome to the App home of DebriefBot! Here you can explore the last 5 debriefs of any batch you are a part of.",
+				emoji: true,
+			},
+			block_id: "header",
+		},
+		{
+			type: "section",
+			block_id: "batch_select",
+			text: {
+				type: "mrkdwn",
+				text: "Select a batch teachers' channel (just one!) to start:",
+			},
+			accessory: {
+				type: "multi_conversations_select",
+				placeholder: {
 					type: "plain_text",
-					text: "Welcome to DebriefBot! Here, you can explore the debriefs of any batch you are a part of. Just enter a batch number below!",
+					text: "Select conversations",
 					emoji: true,
 				},
+				action_id: "batch_selection",
 			},
-			{
-				type: "section",
-				block_id: "batch_select",
-				text: {
-					type: "mrkdwn",
-					text: "Select batch(es) you'd like to see debriefs from",
-				},
-				accessory: {
-					type: "multi_conversations_select",
-					placeholder: {
-						type: "plain_text",
-						text: "Select conversations",
-						emoji: true,
-					},
-					action_id: "batch_selection",
-				},
-			},
-		],
-		callback_id: "home",
-		private_metadata: event.user_id,
-	})
+		},
+	],
+	callback_id: "home",
+})
+
+app.event("app_home_opened", async ({ event, client }) => {
 	try {
 		await client.views.publish({
 			user_id: event.user,
@@ -691,8 +690,34 @@ app.event("app_home_opened", async ({ event, client }) => {
 
 app.action("batch_selection", async ({ ack, payload, body, client }) => {
 	await ack()
-	let selectedResponse
-	let debriefBlocks = {}
+	let debriefBlocks = [
+		{
+			type: "header",
+			text: {
+				type: "plain_text",
+				text: "Welcome to the App home of DebriefBot! Here you can explore the last 5 debriefs of any batch you are a part of.",
+				emoji: true,
+			},
+			block_id: "header",
+		},
+		{
+			type: "section",
+			block_id: "batch_select",
+			text: {
+				type: "mrkdwn",
+				text: "Select a batch teachers' channel (just one!) to start:",
+			},
+			accessory: {
+				type: "multi_conversations_select",
+				placeholder: {
+					type: "plain_text",
+					text: "Select conversations",
+					emoji: true,
+				},
+				action_id: "batch_selection",
+			},
+		},
+	]
 	let lastFiveDebriefs = []
 	let count = 0
 
@@ -707,9 +732,25 @@ app.action("batch_selection", async ({ ack, payload, body, client }) => {
 			return channel.id === payload.selected_conversations[0]
 		})
 		if (channel.length === 0) {
-			selectedResponse = "That's a public channel, make sure you've selected the teachers channel!"
+			const selectedResponseBlock = {
+				type: "header",
+				text: {
+					type: "plain_text",
+					text: "Sorry, I can only look for debriefs using a batch's teacher channel!",
+					emoji: true,
+				},
+			}
+			debriefBlocks.push(selectedResponseBlock)
 		} else {
-			selectedResponse = `You've selected #${channel[0].name}!`
+			const selectedResponseBlock = {
+				type: "header",
+				text: {
+					type: "plain_text",
+					text: `You've selected #${channel[0].name}${payload.selected_conversations.length > 1 ? " (using only the first channel you chose)" : ""}!`,
+					emoji: true,
+				},
+			}
+			debriefBlocks.push(selectedResponseBlock)
 			let result
 			while (lastFiveDebriefs.length < 5 && count < 5) {
 				result = await app.client.conversations.history({
@@ -732,94 +773,29 @@ app.action("batch_selection", async ({ ack, payload, body, client }) => {
 			selectedResponse += ` Unfortunately, we could only find the following ${lastFiveDebriefs.length} debriefs!`
 		}
 		if (lastFiveDebriefs.length > 0) {
-			debriefBlocks = lastFiveDebriefs.map(debrief => debrief.blocks).flat()
+			const blocks = lastFiveDebriefs.flatMap(debrief => debrief.blocks)
+			blocks.forEach(block => {
+				if (block.text && block.text.text) {
+					if (/Hi Team/.test(block.text.text) || /DebriefBot over and/.test(block.text.text) || /next session's lead/.test(block.text.text)) {
+					} else {
+						block.block_id = ""
+						debriefBlocks.push(block)
+					}
+					if (/DebriefBot over and/.test(block.text.text)) {
+						debriefBlocks.push({ type: "divider" })
+					}
+				} else {
+				}
+			})
 		}
-		console.log(debriefBlocks)
 	} catch (error) {
 		console.error(error)
 	}
-	if (lastFiveDebriefs.length > 0) {
-		app_home_basic_block = JSON.stringify({
-			type: "home",
-			blocks: [
-				{
-					type: "header",
-					text: {
-						type: "plain_text",
-						text: "Welcome to DebriefBot! Here, you can explore the debriefs of any batch you are a part of. Just select a batch number below!",
-						emoji: true,
-					},
-				},
-				{
-					type: "section",
-					block_id: "batch_select",
-					text: {
-						type: "mrkdwn",
-						text: "Please select the corresponding teacher batch, not the student one!",
-					},
-					accessory: {
-						type: "multi_conversations_select",
-						placeholder: {
-							type: "plain_text",
-							text: "Select conversations",
-							emoji: true,
-						},
-						action_id: "batch_selection",
-					},
-				},
-				{
-					type: "header",
-					text: {
-						type: "plain_text",
-						text: selectedResponse,
-						emoji: true,
-					},
-				},
-				debriefBlocks,
-			],
-			callback_id: "home",
-		})
-	} else {
-		app_home_basic_block = JSON.stringify({
-			type: "home",
-			blocks: [
-				{
-					type: "header",
-					text: {
-						type: "plain_text",
-						text: "Welcome to DebriefBot! Here, you can explore the debriefs of any batch you are a part of. Just select a batch number below!",
-						emoji: true,
-					},
-				},
-				{
-					type: "section",
-					block_id: "batch_select",
-					text: {
-						type: "mrkdwn",
-						text: "Please select the corresponding teacher batch, not the student one!",
-					},
-					accessory: {
-						type: "multi_conversations_select",
-						placeholder: {
-							type: "plain_text",
-							text: "Select conversations",
-							emoji: true,
-						},
-						action_id: "batch_selection",
-					},
-				},
-				{
-					type: "header",
-					text: {
-						type: "plain_text",
-						text: "No results found!",
-						emoji: true,
-					},
-				},
-			],
-			callback_id: "home",
-		})
-	}
+	app_home_basic_block = JSON.stringify({
+		type: "home",
+		blocks: debriefBlocks,
+		callback_id: "home",
+	})
 
 	try {
 		await client.views.publish({
