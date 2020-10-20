@@ -773,7 +773,7 @@ app.action("batch_selection", async ({ ack, payload, body, client }) => {
 			selectedResponse += ` Unfortunately, we could only find the following ${lastFiveDebriefs.length} debriefs!`
 		}
 		if (lastFiveDebriefs.length > 0) {
-			const blocks = lastFiveDebriefs.flatMap(debrief => debrief.blocks)
+			const blocks = lastFiveDebriefs.splice(0, 5).flatMap(debrief => debrief.blocks)
 			blocks.forEach(block => {
 				if (block.text && block.text.text) {
 					if (/Hi Team/.test(block.text.text) || /DebriefBot over and/.test(block.text.text) || /next session's lead/.test(block.text.text)) {
@@ -791,6 +791,8 @@ app.action("batch_selection", async ({ ack, payload, body, client }) => {
 	} catch (error) {
 		console.error(error)
 	}
+	console.log("Number of blocks:")
+	console.log(debriefBlocks.length)
 	app_home_basic_block = JSON.stringify({
 		type: "home",
 		blocks: debriefBlocks,
