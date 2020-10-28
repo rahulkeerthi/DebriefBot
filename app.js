@@ -1,6 +1,7 @@
 const { App, LogLevel } = require("@slack/bolt")
 require("dotenv").config()
 
+const base = require("airtable").base("appwShjSRx9zXWbhU")
 const slackBotToken = process.env.NODE_ENV === "dev" ? process.env.SLACK_BOT_TOKEN_DEV : process.env.SLACK_BOT_TOKEN
 const slackSigningSecret = process.env.NODE_ENV === "dev" ? process.env.SLACK_SIGNING_SECRET_DEV : process.env.SLACK_SIGNING_SECRET
 
@@ -618,6 +619,28 @@ app.view("debriefModal", async ({ ack, view }) => {
 				text: "",
 				link_names: true,
 			})
+			// POST TO AIRTABLE
+			const channelInfo = await app.client.conversations.info({
+				token: slackBotToken,
+				channel: channel,
+			})
+			const batchDigitsRegex = /(\d{3,})/g
+			const takeawayDate = new Date(channelMessage.ts * 1000)
+			base("Takeaways").create(
+				{
+					fields: {
+						Batch: Number(channelInfo.channel.name.match(batchDigitsRegex)[0]) || 0,
+						Date: `${takeawayDate.getFullYear()}-${takeawayDate.getMonth() + 1}-${takeawayDate.getDate()}`,
+						Takeaway: takeaways,
+					},
+				},
+				err => {
+					if (err) {
+						console.error(err)
+						return
+					}
+				}
+			)
 			if (nextTeacherId && nextTeacherId != "None") {
 				const getPermalinkResponse = await app.client.chat.getPermalink({
 					token: slackBotToken,
