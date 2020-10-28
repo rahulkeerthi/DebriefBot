@@ -1,6 +1,6 @@
 {
 	"name": "debriefbot",
-	"version": "1.0.0",
+	"version": "1.1.0",
 	"description": "DebriefBot is a Slack bot to simplify teaching staff debriefs",
 	"main": "app.js",
 	"scripts": {
@@ -9,7 +9,7 @@
 		"test": "echo \"Error: no test specified\" && exit 1"
 	},
 	"author": "Rahul Keerthi",
-	"license": "ISC",
+	"license": "MIT",
 	"dependencies": {
 		"@slack/bolt": "^2.3.0",
 		"dotenv": "^8.2.0",

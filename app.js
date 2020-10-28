@@ -1,17 +1,18 @@
 const { App, LogLevel } = require("@slack/bolt")
 require("dotenv").config()
 
-let slackBotToken = process.env.NODE_ENV === "dev" ? process.env.SLACK_BOT_TOKEN_DEV : process.env.SLACK_BOT_TOKEN
-let slackSigningSecret = process.env.NODE_ENV === "dev" ? process.env.SLACK_SIGNING_SECRET_DEV : process.env.SLACK_SIGNING_SECRET
-// Initializes your app with your bot token and signing secret
+const slackBotToken = process.env.NODE_ENV === "dev" ? process.env.SLACK_BOT_TOKEN_DEV : process.env.SLACK_BOT_TOKEN
+const slackSigningSecret = process.env.NODE_ENV === "dev" ? process.env.SLACK_SIGNING_SECRET_DEV : process.env.SLACK_SIGNING_SECRET
+
+// INITIALIZE APP
 const app = new App({
 	token: slackBotToken,
 	signingSecret: slackSigningSecret,
 	logLevel: LogLevel.DEBUG,
 })
 
-// fetches the last debrief from the current channel
-async function fetchMessage(channel) {
+// MESSAGE FETCHER
+const fetchMessage = async channel => {
 	try {
 		// fetch last 100 messages from channel
 		const result = await app.client.conversations.history({
@@ -71,7 +72,7 @@ async function fetchMessage(channel) {
 	}
 }
 
-// listens for and responds to /debrief slash command
+// DEBRIEF SLASH COMMAND
 app.command("/debrief", async ({ ack, body, client }) => {
 	let debriefTs
 	let isUpdate = false
@@ -299,7 +300,7 @@ app.command("/debrief", async ({ ack, body, client }) => {
 	}
 })
 
-app.action("teacher_select", async ({ ack, view }) => {
+app.action("teacher_select", async ({ ack }) => {
 	await ack()
 })
 
@@ -643,6 +644,7 @@ app.view("debriefModal", async ({ ack, view }) => {
 	}
 })
 
+// APP HOME
 let app_home_basic_block = JSON.stringify({
 	type: "home",
 	blocks: [
@@ -809,6 +811,8 @@ app.action("batch_selection", async ({ ack, payload, body, client }) => {
 		console.error(error)
 	}
 })
+
+// RUN APP
 ;(async () => {
 	await app.start(process.env.PORT || 4390)
 	console.log("⚡️ Bolt app is running!")
