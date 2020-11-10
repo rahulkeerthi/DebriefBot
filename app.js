@@ -592,6 +592,22 @@ app.view("debriefModal", async ({ ack, view }) => {
 				text: `Today's debrief has been updated! You can see it <${getPermalinkResponse.permalink}|*here*>`,
 				link_names: true,
 			})
+			const batchDigitsRegex = /(\d{3,})/g
+			const takeawayDate = new Date(channelMessage.ts * 1000)
+			base("Takeaways").create(
+				{
+					Batch: Number(channelInfo.channel.name.match(batchDigitsRegex)[0]) || 0,
+					Date: `${takeawayDate.getFullYear()}-${takeawayDate.getMonth() + 1}-${takeawayDate.getDate()}`,
+					Takeaway: `UPDATED: ${takeaways}`,
+				},
+				{ typecast: true },
+				err => {
+					if (err) {
+						console.error(err)
+						return
+					}
+				}
+			)
 			if (nextTeacherId && nextTeacherId != "None") {
 				await app.client.chat.postMessage({
 					token: slackBotToken,
@@ -628,12 +644,11 @@ app.view("debriefModal", async ({ ack, view }) => {
 			const takeawayDate = new Date(channelMessage.ts * 1000)
 			base("Takeaways").create(
 				{
-					fields: {
-						Batch: Number(channelInfo.channel.name.match(batchDigitsRegex)[0]) || 0,
-						Date: `${takeawayDate.getFullYear()}-${takeawayDate.getMonth() + 1}-${takeawayDate.getDate()}`,
-						Takeaway: takeaways,
-					},
+					Batch: Number(channelInfo.channel.name.match(batchDigitsRegex)[0]) || 0,
+					Date: `${takeawayDate.getFullYear()}-${takeawayDate.getMonth() + 1}-${takeawayDate.getDate()}`,
+					Takeaway: takeaways,
 				},
+				{ typecast: true },
 				err => {
 					if (err) {
 						console.error(err)
