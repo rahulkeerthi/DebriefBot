@@ -872,6 +872,193 @@ app.action("batch_selection", async ({ ack, payload, body, client }) => {
 	}
 })
 
+// FEEDBACK MODAL
+app.command("/fb", async ({ ack, body, client }) => {
+	await ack()
+	try {
+		metadata = JSON.stringify({
+			channel: body.channel_id,
+			user: body.user_id,
+		})
+		let submitterName = "there"
+		try {
+			const result = await app.client.users.info({
+				token: slackBotToken,
+				user: body.user_id,
+			})
+			submitterName = result.user.real_name
+		} catch (error) {
+			console.error(error)
+		}
+
+		await client.views.open({
+			trigger_id: body.trigger_id,
+			view: {
+				type: "modal",
+				private_metadata: metadata,
+				callback_id: "feedbackModal",
+				title: {
+					type: "plain_text",
+					text: "Feedback Time! 🚀",
+					emoji: true,
+				},
+				submit: {
+					type: "plain_text",
+					text: "Submit",
+					emoji: true,
+				},
+				close: {
+					type: "plain_text",
+					text: "Cancel",
+					emoji: true,
+				},
+				blocks: [
+					{
+						type: "section",
+						text: {
+							type: "plain_text",
+							text: `:wave: Hey ${submitterName}!\n\nShare some feedback you have to make today's session even better, whether it's a bug, typo, feature or teaching suggestion!`,
+							emoji: true,
+						},
+					},
+					{
+						type: "input",
+						block_id: "courseSelect",
+						element: {
+							type: "static_select",
+							placeholder: {
+								type: "plain_text",
+								text: "Choose one",
+								emoji: true,
+							},
+							options: [
+								{
+									text: {
+										type: "plain_text",
+										text: "Data Science",
+										emoji: true,
+									},
+									value: "Data Science",
+								},
+								{
+									text: {
+										type: "plain_text",
+										text: "Web Dev",
+										emoji: true,
+									},
+									value: "Web Dev",
+								},
+							],
+							action_id: "courseSelect",
+						},
+						label: {
+							type: "plain_text",
+							text: "Select Course",
+							emoji: true,
+						},
+					},
+					{
+						type: "input",
+						block_id: "reference",
+						element: {
+							type: "plain_text_input",
+							action_id: "reference",
+							placeholder: {
+								type: "plain_text",
+								text: "Day / Challenge (e.g. 05/02 or Kitt url)",
+							},
+						},
+						label: {
+							type: "plain_text",
+							text: "Session/Challenge Reference",
+							emoji: true,
+						},
+					},
+					{
+						type: "input",
+						block_id: "notes",
+						label: {
+							type: "plain_text",
+							text: "Your Feedback or Suggestion",
+							emoji: true,
+						},
+						element: {
+							type: "plain_text_input",
+							action_id: "notes",
+							multiline: true,
+						},
+					},
+				],
+			},
+		})
+	} catch (error) {
+		console.error(error)
+	}
+})
+
+app.view("feedbackModal", async ({ ack, view }) => {
+	const values = view.state.values
+	const { channel, user } = JSON.parse(view.private_metadata)
+	try {
+		console.log(values.courseSelect)
+		let reference = values.reference.reference.value
+		let notes = values.notes.notes.value
+		let course = values.courseSelect.courseSelect.selected_option.value
+		let submitterName
+		if (reference && notes && course) {
+			await ack()
+			try {
+				const result = await app.client.users.info({
+					token: slackBotToken,
+					user: user,
+				})
+				submitterName = result.user.real_name
+			} catch (error) {
+				console.error(error)
+			}
+			// POST TO AIRTABLE
+			// const channelInfo = await app.client.conversations.info({
+			// 	token: slackBotToken,
+			// 	channel: channel,
+			// })
+			// const batchDigitsRegex = /(\d{3,})/g
+			// let batchNumber = 0
+			// if (channelInfo.channel.name.match(batchDigitsRegex)[0]) {
+			// 	batchNumber = Number(channelInfo.channel.name.match(batchDigitsRegex)[0])
+			// }
+			const channelMessage = await app.client.chat.postEphemeral({
+				token: slackBotToken,
+				channel: channel,
+				user: user,
+				text: `Thanks ${submitterName}, feedback captured!`,
+			})
+			const feedbackDate = new Date(channelMessage.message_ts * 1000)
+			const date = `${feedbackDate.getFullYear()}-${feedbackDate.getMonth() + 1}-${feedbackDate.getDate()}`
+			console.log(`COURSE: ${course}`)
+			base(course).create(
+				{
+					// Batch: batchNumber,
+					Date: date,
+					Reference: reference,
+					Notes: notes,
+					"Captured By": submitterName,
+				},
+				{ typecast: true },
+				err => {
+					if (err) {
+						console.error(err)
+						return
+					}
+				}
+			)
+		} else {
+			await ack("All fields need to be filled in!")
+		}
+	} catch (err) {
+		console.error(err)
+	}
+})
+
 // RUN APP
 ;(async () => {
 	await app.start(process.env.PORT || 4390)
