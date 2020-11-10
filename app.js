@@ -592,26 +592,35 @@ app.view("debriefModal", async ({ ack, view }) => {
 				text: `Today's debrief has been updated! You can see it <${getPermalinkResponse.permalink}|*here*>`,
 				link_names: true,
 			})
-			const channelInfo = await app.client.conversations.info({
-				token: slackBotToken,
-				channel: channel,
-			})
-			const batchDigitsRegex = /(\d{3,})/g
-			const takeawayDate = new Date(channelMessage.ts * 1000)
-			base("Takeaways").create(
-				{
-					Batch: Number(channelInfo.channel.name.match(batchDigitsRegex)[0]) || 0,
-					Date: `${takeawayDate.getFullYear()}-${takeawayDate.getMonth() + 1}-${takeawayDate.getDate()}`,
-					Takeaway: `UPDATED: ${takeaways}`,
-				},
-				{ typecast: true },
-				err => {
-					if (err) {
-						console.error(err)
-						return
-					}
+			try {
+				const channelInfo = await app.client.conversations.info({
+					token: slackBotToken,
+					channel: channel,
+				})
+				const batchDigitsRegex = /(\d{3,})/g
+				let batchNumber = 0
+				if (channelInfo.channel.name.match(batchDigitsRegex)[0]) {
+					batchNumber = Number(channelInfo.channel.name.match(batchDigitsRegex)[0])
 				}
-			)
+				const takeawayDate = new Date(channelMessage.ts * 1000)
+				const date = `${takeawayDate.getFullYear()}-${takeawayDate.getMonth() + 1}-${takeawayDate.getDate()}`
+				base("Takeaways").create(
+					{
+						Batch: batchNumber,
+						Date: date,
+						Takeaway: takeaways,
+					},
+					{ typecast: true },
+					err => {
+						if (err) {
+							console.error(err)
+							return
+						}
+					}
+				)
+			} catch (err) {
+				console.error(err)
+			}
 			if (nextTeacherId && nextTeacherId != "None") {
 				await app.client.chat.postMessage({
 					token: slackBotToken,
@@ -640,26 +649,35 @@ app.view("debriefModal", async ({ ack, view }) => {
 				link_names: true,
 			})
 			// POST TO AIRTABLE
-			const channelInfo = await app.client.conversations.info({
-				token: slackBotToken,
-				channel: channel,
-			})
-			const batchDigitsRegex = /(\d{3,})/g
-			const takeawayDate = new Date(channelMessage.ts * 1000)
-			base("Takeaways").create(
-				{
-					Batch: Number(channelInfo.channel.name.match(batchDigitsRegex)[0]) || 0,
-					Date: `${takeawayDate.getFullYear()}-${takeawayDate.getMonth() + 1}-${takeawayDate.getDate()}`,
-					Takeaway: takeaways,
-				},
-				{ typecast: true },
-				err => {
-					if (err) {
-						console.error(err)
-						return
-					}
+			try {
+				const channelInfo = await app.client.conversations.info({
+					token: slackBotToken,
+					channel: channel,
+				})
+				const batchDigitsRegex = /(\d{3,})/g
+				let batchNumber = 0
+				if (channelInfo.channel.name.match(batchDigitsRegex)[0]) {
+					batchNumber = Number(channelInfo.channel.name.match(batchDigitsRegex)[0])
 				}
-			)
+				const takeawayDate = new Date(channelMessage.ts * 1000)
+				const date = `${takeawayDate.getFullYear()}-${takeawayDate.getMonth() + 1}-${takeawayDate.getDate()}`
+				base("Takeaways").create(
+					{
+						Batch: batchNumber,
+						Date: date,
+						Takeaway: takeaways,
+					},
+					{ typecast: true },
+					err => {
+						if (err) {
+							console.error(err)
+							return
+						}
+					}
+				)
+			} catch (err) {
+				console.error(err)
+			}
 			if (nextTeacherId && nextTeacherId != "None") {
 				const getPermalinkResponse = await app.client.chat.getPermalink({
 					token: slackBotToken,
