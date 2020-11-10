@@ -586,7 +586,7 @@ app.view("debriefModal", async ({ ack, view }) => {
 				channel: channel,
 				message_ts: debriefTs,
 			})
-			await app.client.chat.postMessage({
+			const channelMessage = await app.client.chat.postMessage({
 				token: slackBotToken,
 				channel: channel,
 				text: `Today's debrief has been updated! You can see it <${getPermalinkResponse.permalink}|*here*>`,
