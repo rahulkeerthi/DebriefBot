@@ -592,6 +592,10 @@ app.view("debriefModal", async ({ ack, view }) => {
 				text: `Today's debrief has been updated! You can see it <${getPermalinkResponse.permalink}|*here*>`,
 				link_names: true,
 			})
+			const channelInfo = await app.client.conversations.info({
+				token: slackBotToken,
+				channel: channel,
+			})
 			const batchDigitsRegex = /(\d{3,})/g
 			const takeawayDate = new Date(channelMessage.ts * 1000)
 			base("Takeaways").create(
